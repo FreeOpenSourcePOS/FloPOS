@@ -1,0 +1,19 @@
+---
+name: Flo POS
+version: 1.0.0
+description: Open Source Point of Sale System for restaurants, salons, and retail shops
+logo: https://raw.githubusercontent.com/FreeOpenSourcePOS/FloPOS/main/frontend/public/flo-logo.png
+website: https://github.com/FreeOpenSourcePOS/FloPOS
+documentation: https://github.com/FreeOpenSourcePOS/FloPOS#readme
+support: https://github.com/FreeOpenSourcePOS/FloPOS/issues
+license: MIT
+categories:
+  - business-apps
+  - pos
+  - restaurant
+os: Ubuntu 24.04 LTS
+minimum_capacity: 2GB RAM
+pricing:
+  - price: "0"
+    unit: hour
+    description: Open source - free to use
