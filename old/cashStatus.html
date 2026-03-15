@@ -1,0 +1,147 @@
+<ion-view view-title="{{'Cash Status'}}">
+    <ion-content>
+        <div class="im-wrapper">
+
+            <!-- Search Form -->
+            <form>
+            <h4 class="border-top"><i class="icon ion-search"></i> {{'Select Day'}}</h4>
+            <div class="list">
+                <label class="item item-input">
+                  <span class="input-label">{{'Day'}}</span>
+                  <input type="date" placeholder="{{'Day'}}" name="day" ng-model="day" required>
+                </label>
+
+                <button class="button button-block button-calm ink" data-ink-color="#9DEAFF" data-ink-opacity="1" ng-click="doRefresh(day)">
+                  {{'Search'}}
+                </button>
+            </div>
+            </form>
+            <!-- Search Form Ends -->
+            <div class="list card stable-bg" ng-show="cash.TotalBill">
+                <!-- <h4>Sales</h4> -->
+                <table width="100%">
+                    <tr>
+                        <td>
+                            <label class="item item-input item-floating-label">
+                                <i class="icon ion-cash"></i> Sale <br> <b>{{cash.Sales}}</b>
+                            </label>
+                        </td>
+                        <td>
+                            <label class="item item-input item-floating-label">
+                                <i class="icon ion-person-add"></i> New <br> <b>{{cash.newcustomers}}</b>
+                            </label>
+                        </td>
+                        <td>
+                            <label class="item item-input item-floating-label">
+                                <i class="icon ion-person-stalker"></i> Old <br> <b>{{cash.revisitingcustomers}}</b>
+                            </label>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div class="list card" ng-show="cash.TotalBill">
+                <!-- <div id='myChart'><a class="zc-ref" href="https://www.zingchart.com/">Charts by ZingChart</a></div> -->
+                <h4>Cash Register</h4>
+                <label class="item item-input">
+                  <table class="cashRegister">
+                    <tr>
+                      <td>
+                          {{'Cash'}}
+                      </td>
+                      <td>
+                          <b>{{cash.CashInHand}}</b>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                          {{'Card'}}
+                      </td>
+                      <td>
+                          <b>{{cash.Card}}</b>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                          {{'Wallets'}}
+                      </td>
+                      <td>
+                          <b>{{cash.wallet}}</b>
+                          <table border="1">
+                              <tr ng-repeat="(w, value) in cash.walletdetails">
+                                  <td>{{w}} : </td>
+                                  <td> {{value}}</td>
+                              </tr>
+                          </table>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                          {{'Points Redeemed'}}
+                      </td>
+                      <td>
+                          <b>{{cash.PointsUsed}}</b>
+                      </td>
+                    </tr>
+                  </table>
+                </label>
+            </div>
+            <div class="list card" ng-show="cash.TotalBill">
+                <!-- <div id='myChart'><a class="zc-ref" href="https://www.zingchart.com/">Charts by ZingChart</a></div> -->
+                <h4>Difference</h4>
+                <label class="item item-input">
+                  <table class="cashRegister">
+                  <tr>
+                    <td>
+                        {{'Unpaid Orders'}}
+                    </td>
+                    <td>
+                        <b>{{cash.Unpaid}}</b>
+                    </td>
+                  </tr>
+                    <tr>
+                      <td>
+                          {{'Rounding +/-'}}
+                      </td>
+                      <td>
+                          <b>{{cash.Rounding | number :2}}</b>
+                      </td>
+                    </tr>
+                  </table>
+                </label>
+            </div>
+            <div class="list card" ng-show="cash.TotalBill">
+                <!-- <div id='myChart'><a class="zc-ref" href="https://www.zingchart.com/">Charts by ZingChart</a></div> -->
+                <h4>Points/Discounts</h4>
+                <label class="item item-input">
+                  <table class="cashRegister">
+                    <tr>
+                      <td>
+                          {{'Points Awarded'}}
+                      </td>
+                      <td>
+                          <b>{{cash.PointsEarned}}</b>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                          {{'Discounts Given'}}
+                      </td>
+                      <td>
+                          <b>{{cash.Discount}}</b>
+                      </td>
+                    </tr>
+                  </table>
+                </label>
+            </div>
+            <div class="list card" ng-show="showCharts">
+                <h4>Sales By Hour of Day</h4>
+                <div class="item item-text-wrap">
+                    <canvas ng-if="showCharts" id="chartingcanvas1" class="chart chart-line" chart-data="graphdatasales" chart-colors="colorssales" chart-options="options" chart-labels="graphlabels" chart-series="graphseriessales"> </canvas>
+                </div>
+                <div class="item item-text-wrap">
+                    <canvas ng-if="showCharts" id="chartingcanvas2" class="chart chart-line" chart-data="graphdataorders" chart-colors="colorsorders" chart-options="options" chart-labels="graphlabels" chart-series="graphseriesorders"> </canvas>
+                </div>
+            </div>
+        </div>
+    </ion-content>
+</ion-view>

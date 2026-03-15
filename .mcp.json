@@ -1,0 +1,28 @@
+{
+  "mcpServers": {
+    "shadcn": {
+      "command": "npx",
+      "args": ["shadcn@latest", "mcp"]
+    },
+    "laravel-boost": {
+      "command": "php",
+      "args": ["/var/www/flopos/backend/artisan", "boost:mcp"]
+    },
+    "puppeteer": {
+      "command": "npx",
+      "args": ["puppeteer-mcp-claude", "serve"],
+      "env": {
+        "NODE_ENV": "production",
+        "PUPPETEER_EXECUTABLE_PATH": "/usr/bin/chromium-browser"
+      }
+    },
+    "postgres": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://flopos_user:5OngS0TDZa1jnQpQOPPneYI2@127.0.0.1:5432/flopos_main"
+      ]
+    }
+  }
+}

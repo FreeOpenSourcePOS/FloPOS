@@ -1,0 +1,54 @@
+<ion-view view-title="{{'Inventory Consumed'}}">
+    <ion-content>
+        <div class="im-wrapper">
+
+            <!-- Search Form -->
+            <form>
+            <h4 class="border-top"><i class="icon ion-search"></i> {{'Select Period'}}</h4>
+            <div class="list">
+                <label class="item item-input item-floating-label">
+                  <span class="input-label">{{'Starting Period'}}</span>
+                  <input type="datetime-local" placeholder="{{'Day'}}" name="startdate" ng-model="startdate" required>
+                </label>
+                <label class="item item-input item-floating-label">
+                  <span class="input-label">{{'Ending Period'}}</span>
+                  <input type="datetime-local" placeholder="{{'Day'}}" name="enddate" ng-model="enddate" required>
+                </label>
+                <button class="button button-block button-calm ink" data-ink-color="#9DEAFF" data-ink-opacity="1" ng-click="doRefresh(startdate, enddate)">
+                  {{'Search'}}
+                </button>
+            </div>
+            </form>
+            <!-- Search Form Ends -->
+            <div ng-show="data.records">
+                <form>
+                    <label class="item item-input">
+                        <i class="icon ion-search"></i>
+                        <input type="text" class="form-control" placeholder="Search..." ng-model="searchTermInventory">
+                    </label>
+                </form>
+                <table class="paleBlueRows">
+                <thead>
+                <tr>
+                    <th ng-click="sortData('itemname')">Item <span ng-show="sortType == 'itemname' && sortDirection == false" class="icon ion-arrow-up-b"></span><span ng-show="sortType == 'itemname' && sortDirection == true" class="icon ion-arrow-down-b"></span></td>
+                    <th ng-click="sortData('instock')">Stock <span ng-show="sortType == 'instock' && sortDirection == false" class="icon ion-arrow-up-b"></span><span ng-show="sortType == 'instock' && sortDirection == true" class="icon ion-arrow-down-b"></span></th>
+                    <th ng-click="sortData('consumed')">Used <span ng-show="sortType == 'consumed' && sortDirection == false" class="icon ion-arrow-up-b"></span><span ng-show="sortType == 'consumed' && sortDirection == true" class="icon ion-arrow-down-b"></span></th>
+                    <th>Balance</th>
+                    <!-- <th><b>Units</b></th> -->
+                </tr>
+                </thead>
+                <tbody>
+                <tr ng-repeat="s in dataStatsArray | orderBy:sortType:sortDirection | filter:searchTermInventory" >
+                    <td data-th="Item">{{s.itemname}} ({{s.unit}})</td>
+                    <td data-th="In Stock"><center>{{s.instock}}</center></td>
+                    <td data-th="Consumed"><center>{{s.consumed}}</center></td>
+                    <td data-th="Balance"><center>{{s.instock - s.consumed}}</center></td>
+                    <!-- <td data-th="Units">{{s.unit}}</td> -->
+                </tr>
+                </tbody>
+                </table>
+            </div>
+
+        </div>
+    </ion-content>
+</ion-view>

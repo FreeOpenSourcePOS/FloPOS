@@ -1,0 +1,39 @@
+<ion-view view-title="{{'Enter Your Mobile Number'}}" align-title="left">
+    <ion-content style="background: url(img/signup.jpg) center; background-size: cover;">
+        <div class="hero no-header flat">
+            <div class="content">
+                <div class="app-icon"></div>
+            </div>
+        </div>
+
+    <div class="row">
+      <div class="col col-center">
+          <div class="" style="padding:10px; color:#ffffff;">
+            <center>
+              <b>Get Realtime Insights of your Business. <br>Companion app to our “Quick Order App”.</b>
+          </center>
+          </div>
+        <div style="-webkit-border-radius: 10px;-moz-border-radius: 10px;border-radius: 10px;background:rgba(255,255,255,0.9);padding: 10px;">
+        <h3 class="welcome-text">{{'Enter Your Mobile Number'}}</h3>
+        <div class="">
+          <form name="login_form" class="" novalidate ng-cloak>
+                <div class="list input-box-border">
+                  <label class="item-input">
+                    <span class="input-group-addon">+91-</span>
+                    <input type="tel" placeholder="{{'10 Digit Mobile'}}" name="user_mobile" ng-model="user.mobile" pattern="[0-9]{10}" maxlength="10" required>
+                  </label>
+                </div>
+
+            <div class="item-body bottom-content" style="padding:0px;">
+              <button type="submit" class="button button-calm button-block" ng-click="doSignUp()" ng-disabled="(login_form.user_mobile.$invalid)">
+                {{'Verify Mobile'}}
+              </button>
+            </div>
+          </form>
+        </div>
+        </div>
+      </div>
+    </div>
+
+    </ion-content>
+</ion-view>

@@ -1,0 +1,87 @@
+[
+  {
+    "title":"View Store Insights",
+    "desc":"Insights Related to Your Store",
+  	"listentries":
+    [
+	    {
+		    "title":"Cash Status",
+		    "image":"img/cash_status.png",
+        "desc": "Cash Status for Given Day",
+        "url":"app.cashStatus"
+	    },
+	    {
+		    "title":"Cash Status Between Days",
+		    "image":"img/cash_status.png",
+        "desc": "Cash Status Between Days",
+        "url":"app.cashStatusBetweenDays"
+	    },
+	    {
+		    "title":"Sales by Employees",
+		    "image":"img/cash_status.png",
+        "desc": "Sales by Employees b/w Dates",
+        "url":"app.salesByEmployeesBetweenDates"
+	    },
+	    {
+		    "title":"Sales by Table/ Counter",
+		    "image":"img/menu_tables.png",
+        "desc": "Sales by Table/ Counter b/w Dates",
+        "url":"app.salesByTablesBetweenDates"
+			},
+			{
+		    "title":"Item wise Sale",
+		    "image":"img/menu_reports.png",
+        "desc": "Detailed Item Wise Sale",
+        "url":"app.itemWiseSale({\"reportby\": \"itemwise\"})"
+	    },
+	    {
+		    "title":"Category wise Sale",
+		    "image":"img/menu_reports.png",
+        "desc": "Detailed Category Wise Sale",
+        "url":"app.itemWiseSale({\"reportby\": \"menuitemcategory\"})"
+	    },
+	    {
+		    "title":"Station wise Sale",
+		    "image":"img/menu_reports.png",
+        "desc": "Detailed Station Wise Sale",
+        "url":"app.itemWiseSale({\"reportby\": \"kitchen\"})"
+	    },
+      {
+		    "title":"Discounts Offered",
+		    "image":"img/menu_discounts.png",
+        "desc": "List of Consumers to whom any discounts offered",
+        "url":"app.discountOffered"
+	    },
+      {
+		    "title":"Orders Placed",
+		    "image":"img/menu_orders.png",
+        "desc": "List of Latest Orders taken",
+        "url":"app.displayOrders"
+	    },
+	    {
+		    "title":"Top Customers",
+		    "image":"img/menu_orders.png",
+        "desc": "Top Customers b/w Dates",
+        "url":"app.topCustomersBetweenDates"
+	    },
+	    {
+		    "title":"Inventory Consumed",
+		    "image":"img/menu_orders.png",
+        "desc": "Inventory Consumed b/w Dates",
+        "url":"app.inventoryConsumedBetweenDates"
+	    },
+	    {
+		    "title":"Cancelled Orders",
+		    "image":"img/menu_orders.png",
+        	"desc": "Cancelled Orders b/w Dates",
+        	"url":"app.cancelledOrdersBetweenDates"
+	    },
+	    {
+		    "title":"Unpaid Orders",
+		    "image":"img/menu_orders.png",
+        	"desc": "Unpaid Orders b/w Dates",
+        	"url":"app.unpaidOrdersBetweenDates"
+	    }
+    ]
+  }
+]

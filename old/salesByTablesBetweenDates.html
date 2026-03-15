@@ -1,0 +1,35 @@
+<ion-view view-title="{{'Sales by Table/ Counter'}}">
+    <ion-content>
+        <div class="im-wrapper">
+
+            <!-- Search Form -->
+            <form>
+            <h4 class="border-top"><i class="icon ion-search"></i> {{'Select Period'}}</h4>
+            <div class="list">
+                <label class="item item-input item-floating-label">
+                  <span class="input-label">{{'Starting Day'}}</span>
+                  <input type="date" placeholder="{{'Day'}}" name="startdate" ng-model="startdate" required>
+                </label>
+                <label class="item item-input item-floating-label">
+                  <span class="input-label">{{'Ending Day'}}</span>
+                  <input type="date" placeholder="{{'Day'}}" name="enddate" ng-model="enddate" required>
+                </label>
+                <button class="button button-block button-calm ink" data-ink-color="#9DEAFF" data-ink-opacity="1" ng-click="doRefresh(startdate, enddate)">
+                  {{'Search'}}
+                </button>
+            </div>
+            </form>
+            <!-- Search Form Ends -->
+          <span ng-repeat="d in data.stats" ng-show="data.stats">
+            <div class="list card">
+                <div class="item item-avatar">
+                    <img src="img/tables_status.png">
+                    <h2>{{d.tablename}}</h2>
+                    <p><strong>Orders:</strong> {{d.orders}}</p>
+                    <p><strong>Amount:</strong> {{d.amount}}</p>
+                </div>
+            </div>
+          </span>
+        </div>
+    </ion-content>
+</ion-view>

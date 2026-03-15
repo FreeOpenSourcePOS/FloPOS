@@ -1,0 +1,99 @@
+<ion-view view-title="{{'Orders'}}">
+    <ion-content>
+        <div class="im-wrapper">
+
+            <!-- Search Form -->
+            <form>
+            <h4 class="border-top"><i class="icon ion-search"></i> {{'Select Period'}}</h4>
+            <div class="list">
+                <label class="item item-input item-floating-label">
+                  <span class="input-label">{{'Starting Period'}}</span>
+                  <input type="datetime-local" placeholder="{{'Day'}}" name="startdate" ng-model="startdate" required>
+                </label>
+                <label class="item item-input item-floating-label">
+                  <span class="input-label">{{'Ending Period'}}</span>
+                  <input type="datetime-local" placeholder="{{'Day'}}" name="enddate" ng-model="enddate" required>
+                </label>
+                <button class="button button-block button-calm ink" data-ink-color="#9DEAFF" data-ink-opacity="1" ng-click="doRefresh(startdate, enddate)">
+                  {{'Search'}}
+                </button>
+            </div>
+            </form>
+            <!-- Search Form Ends -->
+
+          <div ng-show="orders.status">
+            <div class="list card stable-bg">
+            <div class="item item-body">
+              <table class="item" width="80%" border='1'>
+                  <tr>
+                      <th>Start Date</th><td>{{orders.startdate}}</td>
+                  </tr>
+                  <tr>
+                      <th>End Date</th><td>{{orders.enddate}}</td>
+                  </tr>
+                  <tr>
+                      <td colspan="2"> {{orders.totalOrders}} orders for {{orders.totalSaleValue}}/-</td>
+                  </tr>
+              </table>
+            </div>
+            </div>
+          </div>
+          <span ng-repeat="o in orders.orders" ng-show="orders.status">
+            <div class="list card" ng-click="openBillModal(o)">
+                <div class="item item-avatar">
+                    <img src="img/menu_orders.png">
+                    <h2>{{o.customer}}</h2>
+                    <p>{{o.whenplaced}} for {{o.totalBill}} on {{o.orderDateTime}}</p>
+                    <p>Employee: {{o.cashier}}</p>
+                </div>
+            </div>
+          </span>
+
+        <script id="bill-modal.html" type="text/ng-template">
+            <ion-modal-view>
+                <ion-header-bar>
+                    <h1 class="title">Detailed Bill</h1>
+                </ion-header-bar>
+                <ion-content class="padding">
+                    <h4><center>{{bill.customer}}</center></h4>
+                    <center> <b>{{bill.tablename}}</b> <br/> {{bill.orderDateTime}} </center>
+                    <table width="100%">
+                      <tr>
+                        <th><b>Item</b></th>
+                        <th><b>Quantity</b></th>
+                        <th><b>Rate</b></th>
+                        <th><b>Amount</b></th>
+                      </tr>
+                      <tr ng-repeat="oi in bill.orderItems" >
+                        <td data-th="Item">{{oi.itemName}}
+                            <span ng-if="oi.addOnToppings"><br>&nbsp; - {{oi.addOnToppings}}</span>
+                        </td>
+                        <td data-th="Quantity">{{oi.quantity}}</td>
+                        <td data-th="Rate">{{(oi.rateAfterDiscount/oi.quantity|number:2) }}</td>
+                        <td data-th="Amount">{{oi.rateAfterDiscount}}</td>
+                      </tr>
+                    </table>
+                    <center>
+                        <table width="100%">
+                            <tr>
+                                <td ng-if="bill.cash > 0" align="center"><b>Cash</b>: {{bill.cash}}</td>
+                                <td ng-if="bill.changeReturned > 0" align="center"><b>Change Returned</b>: {{bill.changeReturned}}</td>
+                                <td ng-if="bill.card > 0"><b>Card</b>: {{bill.card}}</td>
+                                <td ng-if="bill.paytm > 0"><b>PayTM</b>: {{bill.paytm}}</td>
+                            </tr>
+                        </table>
+                        <span ng-if="bill.discount > 0"><b>Discount</b>: {{bill.discount}} | </span>
+                        <span ng-if="bill.loyalityPoints > 0"><b>Points Used</b>: {{bill.loyalityPoints}} | </span>
+                        Cashier: {{bill.cashier}} 
+                    </center>
+
+                <button class="button button-block button-warm ink" data-ink-opacity="1" ng-click="closeBillModal()">
+                  {{'Close'}}
+                </button>
+                </ion-content>
+            </ion-modal-view>
+        </script>
+
+        </div>
+    </ion-content>
+</ion-view>

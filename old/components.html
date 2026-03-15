@@ -1,0 +1,34 @@
+<ion-view view-title="{{'Store Insights' | translate}}">
+  <ion-content ng-class="{expanded:isExpanded}" class="animate-fade-slide-in">
+    <ion-refresher
+    on-refresh="doListRefresh()"
+    pulling-text="Pull To Refresh"
+    refreshing-text="Getting Data ..."
+    ></ion-refresher>
+    <div class="list card" ng-hide="main_menu">
+      <h2>{{'No Records Found'}}</h2>
+      <p>{{'No records found for your mobile number, Logout and contact support to assign stores to your mobile number and then login again.'}}.
+      </p>
+    </div>
+    <div class="row" ng-repeat="menu in main_menu" ng-show="main_menu">
+        <div class="col col-100">
+          <a class="wrapper" ui-sref='app.lists({menulistname: "restaurantServices.json", storeid: menu.storeid})'>
+            <img src='img/restaurant.jpg' ng-src="{{menu.image}}" height="100%" width="100%" spinner-on-load ng-if="menu.image" />
+            <p>
+              <img src="img/{{menu.isstoreonline}}.png" alt="{{menu.isstoreonline}}">&nbsp;{{menu.storename}}<br>
+              <span>SMS Balance : {{menu.smsbalance}}</span><br>
+              <span>IP : {{menu.internalipaddress}}</span><br>
+              <span>Last Online : {{menu.lastStatusCheckTime}}</span>
+            </p>
+          </a>
+        </div>
+    </div>
+
+    <!-- <div class="list card stable-bg">
+        <h3>Codify: My Restaurant</h3>
+        <p>http://codify.in</p>
+      </a>
+    </div> -->
+
+  </ion-content>
+</ion-view>

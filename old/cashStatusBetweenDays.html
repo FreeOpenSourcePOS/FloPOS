@@ -1,0 +1,73 @@
+<ion-view view-title="{{'Cash Status'}}">
+    <ion-content>
+        <div class="im-wrapper">
+
+            <!-- Search Form -->
+            <form>
+            <h4 class="border-top"><i class="icon ion-search"></i> {{'Select Period'}}</h4>
+            <div class="list">
+                <label class="item item-input item-floating-label">
+                  <span class="input-label">{{'Starting Period'}}</span>
+                  <input type="datetime-local" placeholder="{{'Day'}}" name="startdate" ng-model="startdate" required>
+                </label>
+                <label class="item item-input item-floating-label">
+                  <span class="input-label">{{'Ending Period'}}</span>
+                  <input type="datetime-local" placeholder="{{'Day'}}" name="enddate" ng-model="enddate" required>
+                </label>
+                <button class="button button-block button-calm ink" data-ink-color="#9DEAFF" data-ink-opacity="1" ng-click="doRefresh(startdate, enddate)">
+                  {{'Search'}}
+                </button>
+            </div>
+            </form>
+
+            <div class="list card" ng-show="showCharts">
+                <h4>Sales By Hour of Day</h4>
+                <div class="item item-text-wrap">
+                    <canvas ng-if="showCharts" id="chartingcanvas1" class="chart chart-line" chart-data="graphdatasales" chart-colors="colorssales" chart-options="options" chart-labels="graphlabels" chart-series="graphseriessales"> </canvas>
+                </div>
+                <div class="item item-text-wrap">
+                    <canvas ng-if="showCharts" id="chartingcanvas2" class="chart chart-line" chart-data="graphdataorders" chart-colors="colorsorders" chart-options="options" chart-labels="graphlabels" chart-series="graphseriesorders"> </canvas>
+                </div>
+            </div>
+
+            <!-- Search Form Ends -->
+            <span ng-show="data.stats">
+            <form>
+                <label class="item item-input">
+                    <i class="icon ion-search"></i>
+                    <input type="text" class="form-control" placeholder="Search..." ng-model="searchTerm">
+                </label>
+            </form>
+            <table class="paleBlueRows">
+            <thead>
+                <tr>
+                    <th ng-click="sortData('srno')">Day <span ng-show="sortType == 'srno' && sortDirection == false" class="icon ion-arrow-up-b"></span><span ng-show="sortType == 'srno' && sortDirection == true" class="icon ion-arrow-down-b"></span></th>
+                    <th ng-click="sortData('day')">Date <span ng-show="sortType == 'day' && sortDirection == true" class="icon ion-arrow-down-b"></span><span ng-show="sortType == 'day' && sortDirection == false" class="icon ion-arrow-up-b"></span></th>
+                    <th ng-click="sortData('Sales')">Sale <span ng-show="sortType == 'Sales' && sortDirection == true" class="icon ion-arrow-down-b"></span><span ng-show="sortType == 'Sales' && sortDirection == false" class="icon ion-arrow-up-b"></span></th>
+                    <th ng-click="sortData('PointsUsed')">Points <span ng-show="sortType == 'PointsUsed' && sortDirection == true" class="icon ion-arrow-down-b"></span><span ng-show="sortType == 'PointsUsed' && sortDirection == false" class="icon ion-arrow-up-b"></span></th>
+                    <th ng-click="sortData('TotalOrders')">Orders <span ng-show="sortType == 'TotalOrders' && sortDirection == true" class="icon ion-arrow-down-b"></span><span ng-show="sortType == 'TotalOrders' && sortDirection == false" class="icon ion-arrow-up-b"></span></th>
+                    <th ng-click="sortData('avgSalePerOrder')">Avg. <span ng-show="sortType == 'avgSalePerOrder' && sortDirection == true" class="icon ion-arrow-down-b"></span><span ng-show="sortType == 'avgSalePerOrder' && sortDirection == false" class="icon ion-arrow-up-b"></span></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr ng-repeat="d in dataStatsArray | orderBy:sortType:sortDirection | filter:searchTerm">
+                    <td >{{d.srno}}</td>
+                    <td >{{d.day}}</td>
+                    <td >{{d.Sales}}</td>
+                    <td >{{d.PointsUsed}}</td>
+                    <td >{{d.TotalOrders}}</td>
+                    <td >{{d.avgSalePerOrder}}</td>
+                </tr>
+                <tr>
+                    <th colspan="2"><b>{{data.totalData.day}}</b></th>
+                    <th>{{data.totalData.Sales}}</th>
+                    <th>{{data.totalData.PointsUsed}}</th>
+                    <th>{{data.totalData.TotalOrders}}</th>
+                    <th>{{data.totalData.avgSalePerOrder}}</th>
+                </tr>
+            </tbody>
+            </table>
+            </span>
+        </div>
+    </ion-content>
+</ion-view>

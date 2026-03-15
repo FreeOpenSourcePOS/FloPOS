@@ -1,0 +1,39 @@
+<ion-view view-title="{{'Enter Your Mobile Verification PIN'}}" align-title="left">
+    <ion-content style="background: url(img/signup.jpg) center; background-size: cover;">
+        <div class="hero no-header flat">
+            <div class="content">
+                <div class="app-icon"></div>
+            </div>
+        </div>
+
+    <div class="row">
+      <div class="col col-center">
+        <div style="-webkit-border-radius: 10px;-moz-border-radius: 10px;border-radius: 10px;background:rgba(255,255,255,0.9);padding: 10px;">
+
+        <h3 class="welcome-text">{{'Enter Your Verification PIN'}}</h3>
+        <i>{{'You will receive an SMS in a few minutes'}}</i>
+        <div class="">
+          <form name="verifysmspin_form" class="novalidate ng-cloak">
+                <div class="list input-box-border">
+                  <label class="item-input">
+                    <input type="tel" placeholder="{{'6 Digit SMS PIN'}}" name="user_pin" ng-model="user.pin" pattern="[0-9]{6}" maxlength="6" required valid-pin="user.pin" show-hide-input>
+                  </label>
+                </div>
+
+            <div class="item-body bottom-content" style="padding:0px;">
+              <button type="submit" class="button button-calm button-block" ng-click="doVerifySMSPIN()" ng-disabled="(verifysmspin_form.user_pin.$invalid)">
+                {{'Verify SMS PIN'}}
+              </button>
+            </div>
+          </form>
+        </div>
+        <div class="alternative-actions">
+          <a class="forgot-password button button-small button-clear button-light" ng-click="doReEnterMobile()">
+            {{'Retry Verification'}}
+          </a>
+        </div>
+      </div>
+      </div>
+    </div>
+    </ion-content>
+</ion-view>

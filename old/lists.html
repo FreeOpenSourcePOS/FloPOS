@@ -1,0 +1,23 @@
+<ion-view view-title="Reports: {{menu_list[0].title}}">
+  <ion-content>
+    <!--<div class="bar bar-subheader bar-stable static text-center">
+        <strong class="title">{{menu_list[0].title}}</strong>
+    </div>-->
+
+    <div class="im-wrapper">
+      <strong>{{menu_list[0].desc}}</strong>
+    </div>
+
+    <ion-list class="list">
+      <span ng-repeat="l in menu_list[0].listentries">
+        <a class="item item-icon-right item-avatar" ui-sref="{{l.url}}">
+          <img ng-src="{{l.image}}">
+          <h2>{{l.title}}</h2>
+          <p>{{l.desc}}</p>
+          <i class="icon ion-chevron-right"></i>
+        </a>
+      </span>
+    </ion-list>
+
+  </ion-content>
+</ion-view>

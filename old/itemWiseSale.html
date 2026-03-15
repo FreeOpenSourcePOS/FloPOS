@@ -1,0 +1,85 @@
+<ion-view view-title="Sales Report">
+    <ion-content>
+        <div class="im-wrapper">
+
+            <!-- Search Form -->
+            <form>
+            <h4 class="border-top"><i class="icon ion-search"></i> {{'Select Period'}}</h4>
+            <div class="list">
+                <label class="item item-input item-floating-label">
+                  <span class="input-label">{{'Starting Period'}}</span>
+                  <input type="datetime-local" placeholder="{{'Day'}}" name="startdate" ng-model="startdate" required>
+                </label>
+                <label class="item item-input item-floating-label">
+                  <span class="input-label">{{'Ending Period'}}</span>
+                  <input type="datetime-local" placeholder="{{'Day'}}" name="enddate" ng-model="enddate" required>
+                </label>
+                <button class="button button-block button-calm ink" data-ink-color="#9DEAFF" data-ink-opacity="1" ng-click="doRefresh(startdate, enddate)">
+                  {{'Search'}}
+                </button>
+            </div>
+            </form>
+            <!-- Search Form Ends -->
+            <div class="list card" ng-show="items.records">
+                <h4>{{items.reporttitle}}</h4>
+              <div class="card">
+                  <div class="item item-text-wrap">
+                    <p>{{items.totalsale}}/- Sales</p>
+                    <!-- 
+                    <canvas ng-if="showPieCharts" id="chartingcanvas1" class="chart chart-pie" chart-data="graphdatasales" chart-options="options" chart-labels="graphlabels" chart-series="graphseries"> </canvas>
+                    <hr>
+                    <p>{{items.totalsolditems}} Units Sold</p>
+                    <canvas ng-if="showPieCharts" id="chartingcanvas2" class="chart chart-pie" chart-data="graphdataunits" chart-labels="graphlabels" chart-series="graphseries"> </canvas>
+                    <canvas ng-if="showTrendCharts" id="chartingcanvas3" class="chart chart-line" chart-data="graphdatasales" chart-options="options" chart-labels="graphlabels" chart-series="graphseries"> </canvas>
+                    --> 
+                  </div>
+              </div>
+              <form>
+                <label class="item item-input">
+                    <i class="icon ion-search"></i>
+                    <input type="text" class="form-control" placeholder="Search..." ng-model="searchTerm">
+                </label>
+              </form>
+              <table class="paleBlueRows">
+                <thead>
+                    <tr>
+                      <th ng-click="sortData('Classification')">Item <span ng-show="sortType == 'Classification' && sortDirection == false" class="icon ion-arrow-up-b"></span><span ng-show="sortType == 'Classification' && sortDirection == true" class="icon ion-arrow-down-b"></span></th>
+                      <th ng-click="sortData('Quantity')">Qty <span ng-show="sortType == 'Quantity' && sortDirection == true" class="icon ion-arrow-down-b"></span><span ng-show="sortType == 'Quantity' && sortDirection == false" class="icon ion-arrow-up-b"></span></th>
+                      <th ng-click="sortData('Rate')">Sale <span ng-show="sortType == 'Rate' && sortDirection == true" class="icon ion-arrow-down-b"></span><span ng-show="sortType == 'Rate' && sortDirection == false" class="icon ion-arrow-up-b"></span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr ng-repeat="i in dataStatsArray | orderBy:sortType:sortDirection | filter:searchTerm">
+                      <td >{{i.Classification}}</td>
+                      <td >{{i.Quantity}}</td>
+                      <td >{{i.Rate}}</td>
+                  </tr>
+                  <tr>
+                      <th><b>TOTAL</b></th>
+                      <th>{{items.totalsolditems}}</th>
+                      <th>{{items.totalsale}}</th>
+                  </tr>
+                </tbody>
+              </table>
+<!-- 
+                <div class="row header report_row report_header">
+                    <div class="col report_col">Item</div>
+                    <div class="col report_col col">Qty</div>
+                    <div class="col report_col">Sale</div>
+                </div>
+                <div class="row report_row" ng-repeat="i in items.stats">
+                    <div class="col report_col">{{i.Classification}}</div>
+                    <div class="col report_col">{{i.Quantity}}</div>
+                    <div class="col report_col">{{i.Rate}}</div>
+                </div>
+                <div class="row header report_row report_header">
+                    <div class="col report_col">TOTAL</div>
+                    <div class="col report_col col">{{items.totalsolditems}}</div>
+                    <div class="col report_col">{{items.totalsale}}</div>
+                </div>
+            </div>
+-->
+
+        </div>
+    </ion-content>
+</ion-view>

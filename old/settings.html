@@ -1,0 +1,12 @@
+<ion-view view-title="{{'Settings' | translate}}">
+  <ion-content class="im-wrapper">
+    <div class="app-icon"></div>
+    <h1>{{'Reports Refresh' | translate}}</h1>
+              <ion-checkbox ng-model="isCheckedReportAutoRefresh" ng-change="doChangeAutoRefreshReports(isCheckedReportAutoRefresh)" >Automatically Refresh Reports</ion-checkbox>
+
+      <p>If you would like to Refresh reports automatically when ever reports are opened, keep it checked. If you would like to manually update/ view reports by clicking the Search Button, uncheck it.</p>
+    <h1>{{'Account' | translate}}</h1>
+      <p>{{'If you would like to change your number in the mobile app or you are planning to change the mobile set or app is returning error that you are not authenticated, please logout and register your mobile number again' | translate}}</p>
+      <button class="button button-full button-calm ink" ng-click="actionSheet()">{{'Logout' | translate}}</button>
+  </ion-content>
+</ion-view>
