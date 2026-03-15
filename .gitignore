@@ -37,3 +37,6 @@ coverage/
 # Docker
 .docker/
 docker-compose.override.yml
+
+# Local tasks
+tasks.md

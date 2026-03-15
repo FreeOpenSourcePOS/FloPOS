@@ -5,7 +5,7 @@ import api from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
-import { Plus, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Package, Folder, Puzzle } from 'lucide-react';
 import type { Product, Category, AddonGroup } from '@/lib/types';
 import { tagLabel } from '@/components/pos/DietaryBadge';
 
@@ -25,14 +25,45 @@ const PRESET_TAGS = [
   { key: 'limited', label: 'Limited' },
 ];
 
+const CATEGORY_COLORS = [
+  { key: '', label: 'None', bg: 'bg-gray-100', text: 'text-gray-600' },
+  { key: 'red', label: 'Red', bg: 'bg-red-100', text: 'text-red-700' },
+  { key: 'orange', label: 'Orange', bg: 'bg-orange-100', text: 'text-orange-700' },
+  { key: 'amber', label: 'Amber', bg: 'bg-amber-100', text: 'text-amber-700' },
+  { key: 'yellow', label: 'Yellow', bg: 'bg-yellow-100', text: 'text-yellow-700' },
+  { key: 'lime', label: 'Lime', bg: 'bg-lime-100', text: 'text-lime-700' },
+  { key: 'green', label: 'Green', bg: 'bg-green-100', text: 'text-green-700' },
+  { key: 'emerald', label: 'Emerald', bg: 'bg-emerald-100', text: 'text-emerald-700' },
+  { key: 'teal', label: 'Teal', bg: 'bg-teal-100', text: 'text-teal-700' },
+  { key: 'cyan', label: 'Cyan', bg: 'bg-cyan-100', text: 'text-cyan-700' },
+  { key: 'sky', label: 'Sky', bg: 'bg-sky-100', text: 'text-sky-700' },
+  { key: 'blue', label: 'Blue', bg: 'bg-blue-100', text: 'text-blue-700' },
+  { key: 'indigo', label: 'Indigo', bg: 'bg-indigo-100', text: 'text-indigo-700' },
+  { key: 'violet', label: 'Violet', bg: 'bg-violet-100', text: 'text-violet-700' },
+  { key: 'purple', label: 'Purple', bg: 'bg-purple-100', text: 'text-purple-700' },
+  { key: 'fuchsia', label: 'Fuchsia', bg: 'bg-fuchsia-100', text: 'text-fuchsia-700' },
+  { key: 'pink', label: 'Pink', bg: 'bg-pink-100', text: 'text-pink-700' },
+  { key: 'rose', label: 'Rose', bg: 'bg-rose-100', text: 'text-rose-700' },
+];
+
+type TabType = 'products' | 'categories' | 'addons';
+
 export default function ProductsPage() {
   const { currentTenant } = useAuthStore();
+  const [activeTab, setActiveTab] = useState<TabType>('products');
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [addonGroups, setAddonGroups] = useState<AddonGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [editingAddonGroup, setEditingAddonGroup] = useState<AddonGroup | null>(null);
+  const [categoryForm, setCategoryForm] = useState({ name: '', description: '', color: '', is_active: true });
+  const [addonForm, setAddonForm] = useState({ name: '', description: '', is_required: false, min_selection: 0, max_selection: 10 });
+  const [showAddonModal, setShowAddonModal] = useState(false);
+  const [editingAddon, setEditingAddon] = useState<{ id?: number; name: string; price: string } | null>(null);
+  const [addonList, setAddonList] = useState<{ id?: number; name: string; price: number }[]>([]);
   const [form, setForm] = useState({
     name: '', category_id: '', price: '', cost_price: '', cb_percent: '0', sku: '',
     tax_type: 'inclusive', tax_rate: '5', description: '',
@@ -146,6 +177,86 @@ export default function ProductsPage() {
     }
   };
 
+  const resetCategoryForm = () => {
+    setCategoryForm({ name: '', description: '', color: '', is_active: true });
+    setEditingCategory(null);
+    setShowForm(false);
+  };
+
+  const openEditCategory = (cat: Category) => {
+    setEditingCategory(cat);
+    setCategoryForm({ name: cat.name, description: cat.description || '', color: cat.color || '', is_active: cat.is_active });
+    setShowForm(true);
+  };
+
+  const handleCategorySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const payload = { name: categoryForm.name, description: categoryForm.description || null, color: categoryForm.color || null, is_active: categoryForm.is_active };
+      if (editingCategory) {
+        await api.put(`/categories/${editingCategory.id}`, payload);
+        toast.success('Category updated');
+      } else {
+        await api.post('/categories', payload);
+        toast.success('Category created');
+      }
+      resetCategoryForm();
+      fetchData();
+    } catch { toast.error('Failed to save category'); }
+  };
+
+  const handleCategoryDelete = async (id: number) => {
+    if (!confirm('Delete this category?')) return;
+    try {
+      await api.delete(`/categories/${id}`);
+      toast.success('Category deleted');
+      fetchData();
+    } catch { toast.error('Failed to delete'); }
+  };
+
+  const resetAddonForm = () => {
+    setAddonForm({ name: '', description: '', is_required: false, min_selection: 0, max_selection: 10 });
+    setEditingAddonGroup(null);
+    setShowAddonModal(false);
+    setAddonList([]);
+  };
+
+  const openEditAddonGroup = (group: AddonGroup) => {
+    setEditingAddonGroup(group);
+    setAddonForm({ name: group.name, description: group.description || '', is_required: group.is_required, min_selection: group.min_selection, max_selection: group.max_selection });
+    setAddonList(group.addons?.map((a) => ({ id: a.id, name: a.name, price: a.price })) || []);
+    setShowAddonModal(true);
+  };
+
+  const handleAddonGroupSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const payload = { name: addonForm.name, description: addonForm.description || null, is_required: addonForm.is_required, min_selection: addonForm.min_selection, max_selection: addonForm.max_selection, addons: addonList };
+      if (editingAddonGroup) {
+        await api.put(`/addon-groups/${editingAddonGroup.id}`, payload);
+        toast.success('Addon group updated');
+      } else {
+        await api.post('/addon-groups', payload);
+        toast.success('Addon group created');
+      }
+      resetAddonForm();
+      fetchData();
+    } catch { toast.error('Failed to save addon group'); }
+  };
+
+  const handleAddonGroupDelete = async (id: number) => {
+    if (!confirm('Delete this addon group?')) return;
+    try {
+      await api.delete(`/addon-groups/${id}`);
+      toast.success('Addon group deleted');
+      fetchData();
+    } catch { toast.error('Failed to delete'); }
+  };
+
+  const addAddonItem = () => setAddonList((prev) => [...prev, { name: '', price: 0 }]);
+  const updateAddonItem = (idx: number, field: string, value: string | number) => setAddonList((prev) => prev.map((a, i) => i === idx ? { ...a, [field]: value } : a));
+  const removeAddonItem = (idx: number) => setAddonList((prev) => prev.filter((_, i) => i !== idx));
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -158,10 +269,29 @@ export default function ProductsPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Products</h1>
-        <Button onClick={() => { resetForm(); setShowForm(true); }}>
-          <Plus size={16} className="mr-1" /> Add Product
-        </Button>
       </div>
+
+      <div className="flex gap-1 mb-6 border-b">
+        <button onClick={() => setActiveTab('products')} className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-px ${activeTab === 'products' ? 'border-brand text-brand' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+          <Package size={16} /> Products
+        </button>
+        <button onClick={() => setActiveTab('categories')} className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-px ${activeTab === 'categories' ? 'border-brand text-brand' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+          <Folder size={16} /> Categories
+        </button>
+        {isRestaurant && (
+          <button onClick={() => setActiveTab('addons')} className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-px ${activeTab === 'addons' ? 'border-brand text-brand' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+            <Puzzle size={16} /> Addon Groups
+          </button>
+        )}
+      </div>
+
+      {activeTab === 'products' && (
+        <>
+          <div className="flex justify-end mb-4">
+            <Button onClick={() => { resetForm(); setShowForm(true); }}>
+              <Plus size={16} className="mr-1" /> Add Product
+            </Button>
+          </div>
 
       {/* Product Table */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -396,6 +526,184 @@ export default function ProductsPage() {
             </form>
           </div>
         </div>
+      )}
+        </>
+      )}
+
+      {activeTab === 'categories' && (
+        <>
+          <div className="flex justify-end mb-4">
+            <Button onClick={() => { resetCategoryForm(); setShowForm(true); }}>
+              <Plus size={16} className="mr-1" /> Add Category
+            </Button>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase">Name</th>
+                  <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase">Color</th>
+                  <th className="text-center p-4 text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="text-right p-4 text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {categories.map((cat) => {
+                  const colorObj = CATEGORY_COLORS.find((c) => c.key === cat.color);
+                  return (
+                    <tr key={cat.id} className="hover:bg-gray-50">
+                      <td className="p-4 font-medium text-gray-900">{cat.name}</td>
+                      <td className="p-4">
+                        {colorObj ? (
+                          <span className={`inline-flex px-2 py-1 rounded-lg text-xs font-medium ${colorObj.bg} ${colorObj.text}`}>{colorObj.label}</span>
+                        ) : <span className="text-gray-400 text-sm">—</span>}
+                      </td>
+                      <td className="p-4 text-center">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${cat.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
+                          {cat.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="p-4 text-right">
+                        <div className="flex gap-2 justify-end">
+                          <button onClick={() => openEditCategory(cat)} className="p-1.5 text-gray-400 hover:text-brand"><Pencil size={16} /></button>
+                          <button onClick={() => handleCategoryDelete(cat.id)} className="p-1.5 text-gray-400 hover:text-red-600"><Trash2 size={16} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {categories.length === 0 && <p className="text-center text-gray-500 py-12">No categories yet. Add your first category!</p>}
+          </div>
+
+          {showForm && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-lg font-bold">{editingCategory ? 'Edit Category' : 'Add Category'}</h2>
+                  <button onClick={resetCategoryForm} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+                </div>
+                <form onSubmit={handleCategorySubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <input type="text" value={categoryForm.name} onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand outline-none" required />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea value={categoryForm.description} onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand outline-none" rows={2} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Color</label>
+                    <div className="flex flex-wrap gap-2">
+                      {CATEGORY_COLORS.map((c) => (
+                        <button type="button" key={c.key} onClick={() => setCategoryForm({ ...categoryForm, color: c.key })} className={`px-3 py-1.5 rounded-lg text-xs font-medium border-2 ${c.key === categoryForm.color ? 'border-brand' : 'border-transparent'} ${c.bg} ${c.text}`}>{c.label}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <label className="flex items-center gap-2">
+                    <input type="checkbox" checked={categoryForm.is_active} onChange={(e) => setCategoryForm({ ...categoryForm, is_active: e.target.checked })} className="rounded border-gray-300 text-brand focus:ring-brand" />
+                    <span className="text-sm text-gray-700">Active</span>
+                  </label>
+                  <Button type="submit" className="w-full">{editingCategory ? 'Update' : 'Create'}</Button>
+                </form>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {activeTab === 'addons' && isRestaurant && (
+        <>
+          <div className="flex justify-end mb-4">
+            <Button onClick={() => { resetAddonForm(); setShowAddonModal(true); }}>
+              <Plus size={16} className="mr-1" /> Add Addon Group
+            </Button>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase">Name</th>
+                  <th className="text-center p-4 text-xs font-medium text-gray-500 uppercase">Required</th>
+                  <th className="text-center p-4 text-xs font-medium text-gray-500 uppercase">Selection</th>
+                  <th className="text-center p-4 text-xs font-medium text-gray-500 uppercase">Addons</th>
+                  <th className="text-right p-4 text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {addonGroups.map((group) => (
+                  <tr key={group.id} className="hover:bg-gray-50">
+                    <td className="p-4 font-medium text-gray-900">{group.name}</td>
+                    <td className="p-4 text-center">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${group.is_required ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>{group.is_required ? 'Yes' : 'No'}</span>
+                    </td>
+                    <td className="p-4 text-center text-sm text-gray-600">{group.min_selection} - {group.max_selection}</td>
+                    <td className="p-4 text-center text-sm text-gray-600">{group.addons?.length || 0}</td>
+                    <td className="p-4 text-right">
+                      <div className="flex gap-2 justify-end">
+                        <button onClick={() => openEditAddonGroup(group)} className="p-1.5 text-gray-400 hover:text-brand"><Pencil size={16} /></button>
+                        <button onClick={() => handleAddonGroupDelete(group.id)} className="p-1.5 text-gray-400 hover:text-red-600"><Trash2 size={16} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {addonGroups.length === 0 && <p className="text-center text-gray-500 py-12">No addon groups yet.</p>}
+          </div>
+
+          {showAddonModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-lg font-bold">{editingAddonGroup ? 'Edit Addon Group' : 'Add Addon Group'}</h2>
+                  <button onClick={resetAddonForm} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+                </div>
+                <form onSubmit={handleAddonGroupSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <input type="text" value={addonForm.name} onChange={(e) => setAddonForm({ ...addonForm, name: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand outline-none" required />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <input type="text" value={addonForm.description} onChange={(e) => setAddonForm({ ...addonForm, description: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand outline-none" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Min Selection</label>
+                      <input type="number" min="0" value={addonForm.min_selection} onChange={(e) => setAddonForm({ ...addonForm, min_selection: Number(e.target.value) })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Max Selection</label>
+                      <input type="number" min="0" value={addonForm.max_selection} onChange={(e) => setAddonForm({ ...addonForm, max_selection: Number(e.target.value) })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand outline-none" />
+                    </div>
+                  </div>
+                  <label className="flex items-center gap-2">
+                    <input type="checkbox" checked={addonForm.is_required} onChange={(e) => setAddonForm({ ...addonForm, is_required: e.target.checked })} className="rounded border-gray-300 text-brand focus:ring-brand" />
+                    <span className="text-sm text-gray-700">Required</span>
+                  </label>
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="block text-sm font-medium text-gray-700">Addons</label>
+                      <button type="button" onClick={addAddonItem} className="text-xs text-brand hover:underline">+ Add Addon</button>
+                    </div>
+                    <div className="space-y-2">
+                      {addonList.map((addon, idx) => (
+                        <div key={idx} className="flex gap-2">
+                          <input type="text" value={addon.name} onChange={(e) => updateAddonItem(idx, 'name', e.target.value)} placeholder="Name" className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand outline-none" />
+                          <input type="number" step="0.01" value={addon.price} onChange={(e) => updateAddonItem(idx, 'price', Number(e.target.value))} placeholder="Price" className="w-24 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand outline-none" />
+                          <button type="button" onClick={() => removeAddonItem(idx)} className="text-gray-400 hover:text-red-500"><X size={16} /></button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <Button type="submit" className="w-full">{editingAddonGroup ? 'Update' : 'Create'}</Button>
+                </form>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

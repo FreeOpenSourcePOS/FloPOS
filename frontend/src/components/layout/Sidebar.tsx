@@ -12,7 +12,6 @@ import {
   ChefHat,
   Settings,
   LogOut,
-  Puzzle,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { getLandingPage } from '@/components/layout/AuthGuard';
@@ -35,7 +34,6 @@ const ALL_NAV_ITEMS = [
   { href: '/kitchen-display', label: 'Kitchen',      icon: ChefHat,       roles: ['owner', 'manager', 'cashier', 'cook'],      businessTypes: ['restaurant'] },
   { href: '/orders',          label: 'Orders',       icon: ClipboardList, roles: ['owner', 'manager', 'cashier'],              businessTypes: null },
   { href: '/products',        label: 'Products',     icon: Package,       roles: ['owner', 'manager'],                         businessTypes: null },
-  { href: '/addon-groups',    label: 'Addon Groups', icon: Puzzle,        roles: ['owner', 'manager'],                         businessTypes: ['restaurant'] },
   { href: '/tables',          label: 'Tables',       icon: Grid3X3,       roles: ['owner', 'manager'],                         businessTypes: ['restaurant'] },
   { href: '/customers',       label: 'Customers',    icon: Users,         roles: ['owner', 'manager'],                         businessTypes: null },
   { href: '/staff',           label: 'Staff',        icon: UserCog,       roles: ['owner', 'manager'],                         businessTypes: null },

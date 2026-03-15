@@ -12,7 +12,7 @@ export default function DashboardLayout({
 }) {
   return (
     <AuthGuard>
-      <SidebarProvider>
+      <SidebarProvider defaultOpen={false}>
         <AppSidebar />
         <SidebarInset className="h-screen overflow-hidden">
           <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
