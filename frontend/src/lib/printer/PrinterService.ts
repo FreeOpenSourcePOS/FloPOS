@@ -1,74 +1,66 @@
 /**
- * PrinterService — Web Serial API thermal printer driver with mock mode.
+ * PrinterService — WebUSB ESC/POS thermal printer driver.
  *
- * Real usage:  await printerService.connect();
- *              await printerService.print(bytes);
+ * Real usage (WebUSB):  await printerService.connect();
+ *                        await printerService.print(bytes);
  *
- * Mock usage:  printerService.setMock(true);
- *              await printerService.print(bytes);  // hex-dumps to console, no port needed
- *
- * macOS dev setup (no physical printer):
- *   brew install socat
- *   socat -d -d pty,raw,echo=0 pty,raw,echo=0
- *   # Note the two /dev/ttys### paths printed.
- *   # Connect the browser to the first one.
- *   # Read ESC/POS bytes from the second one:
- *   cat /dev/ttys005 > /tmp/receipt.bin   (then upload to an online ESC/POS viewer)
- *   # or live hex view:
- *   cat /dev/ttys005 | xxd
+ * Browser fallback:     Use window.print() with thermal-optimized CSS
  */
 
 export type PrinterStatus =
   | 'disconnected'
   | 'connecting'
   | 'connected'
-  | 'error'
-  | 'mock';
+  | 'error';
+
+export type PrintMode = 'escpos' | 'browser';
 
 export interface PrinterInfo {
   vendorId: number;
   productId: number;
   manufacturerName?: string;
   productName?: string;
+  serialNumber?: string;
 }
 
 type StatusListener = (status: PrinterStatus, info?: PrinterInfo) => void;
 
+const ESCPOS_USB_CLASS = 0x07;
+const PRINTER_INTERFACE = 0;
+const PRINTER_ENDPOINT_OUT = 0x01;
+
 class PrinterService {
-  private port: SerialPort | null = null;
-  private mockMode = false;
+  private device: USBDevice | null = null;
+  private interfaceClaimed = false;
   private _status: PrinterStatus = 'disconnected';
+  private _printMode: PrintMode = 'escpos';
   private listeners: Set<StatusListener> = new Set();
 
-  // ---------------------------------------------------------------------------
-  // Public API
-  // ---------------------------------------------------------------------------
-
-  get isMock(): boolean {
-    return this.mockMode;
+  get isConnected(): boolean {
+    return this._status === 'connected';
   }
 
   get status(): PrinterStatus {
     return this._status;
   }
 
+  get printMode(): PrintMode {
+    return this._printMode;
+  }
+
   get deviceInfo(): PrinterInfo | null {
-    if (!this.port) return null;
-    const info = this.port.getInfo();
+    if (!this.device) return null;
     return {
-      vendorId: info.usbVendorId ?? 0,
-      productId: info.usbProductId ?? 0,
+      vendorId: this.device.vendorId,
+      productId: this.device.productId,
+      manufacturerName: this.device.manufacturerName ?? undefined,
+      productName: this.device.productName ?? undefined,
+      serialNumber: this.device.serialNumber ?? undefined,
     };
   }
 
-  setMock(enabled: boolean): void {
-    this.mockMode = enabled;
-    if (enabled) {
-      this.port = null;
-      this.setStatus('mock');
-    } else {
-      this.setStatus('disconnected');
-    }
+  setPrintMode(mode: PrintMode): void {
+    this._printMode = mode;
   }
 
   onStatusChange(listener: StatusListener): () => void {
@@ -77,86 +69,188 @@ class PrinterService {
   }
 
   /**
-   * Opens the browser's serial port picker and connects.
+   * Opens the browser's USB device picker and connects to a thermal printer.
    * Must be called from a user-gesture handler (click, etc.).
    */
   async connect(): Promise<void> {
-    if (this.mockMode) return;
+    if (this._printMode === 'browser') {
+      return;
+    }
 
-    if (!navigator.serial) {
+    if (!navigator.usb) {
       throw new Error(
-        'Web Serial API is not supported in this browser. Use Chrome or Edge 89+.'
+        'WebUSB API is not supported in this browser. Use Chrome or Edge 89+.'
       );
     }
 
     this.setStatus('connecting');
 
     try {
-      this.port = await navigator.serial.requestPort();
+      this.device = await navigator.usb.requestDevice({
+        filters: [
+          { classCode: ESCPOS_USB_CLASS },
+          { vendorId: 0x0483 },
+          { vendorId: 0x04b8 },
+          { vendorId: 0x0519 },
+          { vendorId: 0x0dd4 },
+          { vendorId: 0x1504 },
+          { vendorId: 0x1a86 },
+          { vendorId: 0x1fc9 },
+          { vendorId: 0x20d1 },
+          { vendorId: 0x2109 },
+          { vendorId: 0x22e0 },
+          { vendorId: 0x2e8d },
+          { vendorId: 0x37b9 },
+          { vendorId: 0x41c9 },
+          { vendorId: 0x4d42 },
+          { vendorId: 0x5255 },
+          { vendorId: 0x525a },
+          { vendorId: 0x0fe6 },
+          { vendorId: 0x1b24 },
+          { vendorId: 0x0922 },
+        ],
+      });
     } catch (err: unknown) {
-      // User dismissed the picker — treat as disconnected, not an error.
       if (err instanceof DOMException && err.name === 'NotFoundError') {
         this.setStatus('disconnected');
         return;
       }
       this.setStatus('error');
-      throw new Error(`Port selection failed: ${(err as Error).message}`);
+      throw new Error(`USB device selection failed: ${(err as Error).message}`);
     }
 
     try {
-      await this.port.open({ baudRate: 9600 });
+      await this.device.open();
+
+      if (this.device.configuration === null) {
+        await this.device.selectConfiguration(1);
+      }
+
+      for (const iface of this.device.configurations[0]?.interfaces ?? []) {
+        const alt = iface.alternates[0];
+        if (alt?.interfaceClass === ESCPOS_USB_CLASS) {
+          await this.device.claimInterface(iface.interfaceNumber);
+          this.interfaceClaimed = true;
+          break;
+        }
+      }
+
+      if (!this.interfaceClaimed) {
+        await this.device.claimInterface(PRINTER_INTERFACE);
+        this.interfaceClaimed = true;
+      }
     } catch (err) {
-      this.port = null;
+      await this.disconnect();
       this.setStatus('error');
-      throw new Error(`Could not open port: ${(err as Error).message}`);
+      throw new Error(`Could not connect to printer: ${(err as Error).message}`);
     }
 
     this.setStatus('connected', this.deviceInfo ?? undefined);
-    navigator.serial.addEventListener('disconnect', this.handleDisconnect);
+    navigator.usb.addEventListener('disconnect', this.handleDisconnect);
   }
 
   async disconnect(): Promise<void> {
-    navigator.serial?.removeEventListener('disconnect', this.handleDisconnect);
-    if (this.port) {
+    navigator.usb?.removeEventListener('disconnect', this.handleDisconnect);
+
+    if (this.device) {
       try {
-        await this.port.close();
-      } catch {
-        // Ignore — port may already be gone.
-      }
-      this.port = null;
+        if (this.interfaceClaimed) {
+          await this.device.releaseInterface(PRINTER_INTERFACE).catch(() => {});
+        }
+      } catch {}
+
+      try {
+        await this.device.close();
+      } catch {}
+
+      this.device = null;
+      this.interfaceClaimed = false;
     }
-    this.setStatus(this.mockMode ? 'mock' : 'disconnected');
+
+    this.setStatus('disconnected');
   }
 
   /**
-   * Send a raw ESC/POS byte array to the printer.
-   * In mock mode the bytes are hex-dumped to the console instead.
+   * Send raw ESC/POS bytes to the printer via WebUSB.
+   * Throws if not connected or in browser print mode.
    */
   async print(data: Uint8Array): Promise<void> {
-    if (this.mockMode) {
-      this.mockPrint(data);
-      return;
+    if (this._printMode === 'browser') {
+      throw new Error('Browser print mode is active. Use window.print() instead.');
     }
 
-    if (!this.port || this._status !== 'connected') {
+    if (!this.device || this._status !== 'connected') {
       throw new Error('Printer is not connected. Call connect() first.');
     }
 
-    if (!this.port.writable) {
-      throw new Error('Serial port is not writable.');
-    }
-
-    const writer = this.port.writable.getWriter();
     try {
-      await writer.write(data);
-    } finally {
-      writer.releaseLock();
+      await this.device.transferOut(PRINTER_ENDPOINT_OUT, data.buffer as ArrayBuffer);
+    } catch (err) {
+      throw new Error(`Print failed: ${(err as Error).message}`);
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Private helpers
-  // ---------------------------------------------------------------------------
+  /**
+   * Print using browser's print dialog with thermal-optimized styles.
+   * @param htmlContent - The HTML to print
+   * @param paperWidth - Paper width in mm (58 or 80)
+   */
+  async printViaBrowser(htmlContent: string, paperWidth: 58 | 80): Promise<void> {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      throw new Error('Please allow popups to print');
+    }
+
+    const mmWidth = paperWidth === 58 ? '58mm' : '80mm';
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Receipt</title>
+          <style>
+            @page {
+              size: ${mmWidth} auto;
+              margin: 0;
+            }
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            body {
+              font-family: 'Courier New', monospace;
+              font-size: 12px;
+              line-height: 1.2;
+              width: ${mmWidth};
+              max-width: ${mmWidth};
+              margin: 0 auto;
+              padding: 4px;
+              text-align: left;
+            }
+            @media print {
+              body {
+                width: ${mmWidth} !important;
+                max-width: ${mmWidth} !important;
+              }
+              @page {
+                size: ${mmWidth} auto;
+                margin: 0;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          ${htmlContent}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.onload = () => {
+      printWindow.print();
+      printWindow.close();
+    };
+  }
 
   private setStatus(status: PrinterStatus, info?: PrinterInfo): void {
     this._status = status;
@@ -164,43 +258,13 @@ class PrinterService {
   }
 
   private handleDisconnect = (event: Event): void => {
-    const e = event as Event & { port: SerialPort };
-    if (e.port === this.port) {
-      this.port = null;
+    const e = event as USBConnectionEvent;
+    if (e.device === this.device) {
+      this.device = null;
+      this.interfaceClaimed = false;
       this.setStatus('disconnected');
     }
   };
-
-  private mockPrint(data: Uint8Array): void {
-    const hex = Array.from(data)
-      .map((b) => b.toString(16).padStart(2, '0').toUpperCase())
-      .join(' ');
-
-    console.groupCollapsed(`[PrinterService MOCK] ${data.length} bytes`);
-    console.log('Hex dump:\n' + chunkString(hex, 48).join('\n'));
-    console.log('ASCII (printable chars):\n' + toAsciiPreview(data));
-    console.groupEnd();
-    console.info('[PrinterService MOCK] Print cycle complete (simulated).');
-  }
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function chunkString(str: string, size: number): string[] {
-  const chunks: string[] = [];
-  for (let i = 0; i < str.length; i += size) {
-    chunks.push(str.slice(i, i + size));
-  }
-  return chunks;
-}
-
-function toAsciiPreview(data: Uint8Array): string {
-  return Array.from(data)
-    .map((b) => (b >= 0x20 && b < 0x7f ? String.fromCharCode(b) : '.'))
-    .join('');
-}
-
-// Export a singleton so all components share the same port handle.
 export const printerService = new PrinterService();

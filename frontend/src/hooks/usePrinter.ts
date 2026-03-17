@@ -1,42 +1,34 @@
-/**
- * usePrinter — Zustand store that wraps PrinterService.
- *
- * Components subscribe to `status`, `deviceInfo`, and `mockMode` and call
- * `connect`, `disconnect`, `print`, and `toggleMock` through this hook.
- */
-
 'use client';
 
 import { useEffect } from 'react';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { printerService, type PrinterStatus, type PrinterInfo } from '@/lib/printer/PrinterService';
+import { printerService, type PrinterStatus, type PrinterInfo, type PrintMode } from '@/lib/printer/PrinterService';
 import { buildReceiptBytes, type ReceiptOptions } from '@/lib/printer/receipt-encoder';
 import { buildGstBillBytes, type GstBillOptions } from '@/lib/printer/gst-bill-encoder';
 import { buildKotBytes, type KotOptions } from '@/lib/printer/kot-encoder';
 import type { Bill, Tenant, Order } from '@/lib/types';
 
-type PrintMode = 'receipt' | 'gst' | 'kot';
+type PrintModeType = 'receipt' | 'gst' | 'kot';
 type PaperWidth = 58 | 80;
 
 interface PrinterState {
   status: PrinterStatus;
   deviceInfo: PrinterInfo | null;
-  mockMode: boolean;
   lastError: string | null;
   lastPrintedBytes: Uint8Array | null;
-  printMode: PrintMode;
+  printMode: PrintModeType;
   paperWidth: PaperWidth;
+  printMethod: PrintMode;
 
-  // Actions
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
   printBill: (bill: Bill, tenant: Pick<Tenant, 'business_name' | 'currency'>, opts?: ReceiptOptions) => Promise<void>;
   printGstBill: (bill: Bill, tenant: Pick<Tenant, 'business_name' | 'currency'>, opts?: GstBillOptions) => Promise<void>;
   printKot: (order: Order, opts?: KotOptions) => Promise<void>;
-  setPrintMode: (mode: PrintMode) => void;
+  setPrintMode: (mode: PrintModeType) => void;
   setPaperWidth: (width: PaperWidth) => void;
-  toggleMock: () => void;
+  setPrintMethod: (method: PrintMode) => void;
   clearError: () => void;
   downloadLastReceipt: () => void;
   copyLastReceiptHex: () => Promise<void>;
@@ -45,13 +37,13 @@ interface PrinterState {
 export const usePrinterStore = create<PrinterState>()(
   persist(
     (set, get) => ({
-      status: printerService.isMock ? 'mock' : 'disconnected',
+      status: 'disconnected',
       deviceInfo: null,
-      mockMode: false,
       lastError: null,
       lastPrintedBytes: null,
       printMode: 'receipt',
       paperWidth: 58,
+      printMethod: 'escpos',
 
       connect: async () => {
         set({ lastError: null });
@@ -71,8 +63,13 @@ export const usePrinterStore = create<PrinterState>()(
         try {
           const { paperWidth } = get();
           const bytes = buildReceiptBytes(bill, tenant, { ...opts, paperWidth });
-          if (get().mockMode) set({ lastPrintedBytes: bytes });
-          await printerService.print(bytes);
+          set({ lastPrintedBytes: bytes });
+          
+          if (get().printMethod === 'escpos') {
+            await printerService.print(bytes);
+          } else {
+            throw new Error('Browser print mode - use printViaBrowser instead');
+          }
         } catch (err) {
           set({ lastError: (err as Error).message });
           throw err;
@@ -84,8 +81,13 @@ export const usePrinterStore = create<PrinterState>()(
         try {
           const { paperWidth } = get();
           const bytes = buildGstBillBytes(bill, tenant, { ...opts, paperWidth });
-          if (get().mockMode) set({ lastPrintedBytes: bytes });
-          await printerService.print(bytes);
+          set({ lastPrintedBytes: bytes });
+          
+          if (get().printMethod === 'escpos') {
+            await printerService.print(bytes);
+          } else {
+            throw new Error('Browser print mode - use printViaBrowser instead');
+          }
         } catch (err) {
           set({ lastError: (err as Error).message });
           throw err;
@@ -97,8 +99,13 @@ export const usePrinterStore = create<PrinterState>()(
         try {
           const { paperWidth } = get();
           const bytes = buildKotBytes(order, { ...opts, paperWidth });
-          if (get().mockMode) set({ lastPrintedBytes: bytes });
-          await printerService.print(bytes);
+          set({ lastPrintedBytes: bytes });
+          
+          if (get().printMethod === 'escpos') {
+            await printerService.print(bytes);
+          } else {
+            throw new Error('Browser print mode - use printViaBrowser instead');
+          }
         } catch (err) {
           set({ lastError: (err as Error).message });
           throw err;
@@ -107,11 +114,9 @@ export const usePrinterStore = create<PrinterState>()(
 
       setPrintMode: (mode) => set({ printMode: mode }),
       setPaperWidth: (width) => set({ paperWidth: width }),
-
-      toggleMock: () => {
-        const next = !get().mockMode;
-        printerService.setMock(next);
-        set({ mockMode: next, status: next ? 'mock' : 'disconnected', deviceInfo: null, lastError: null });
+      setPrintMethod: (method) => {
+        printerService.setPrintMode(method);
+        set({ printMethod: method, lastError: null });
       },
 
       clearError: () => set({ lastError: null }),
@@ -139,19 +144,11 @@ export const usePrinterStore = create<PrinterState>()(
     }),
     {
       name: 'flo-printer-settings',
-      partialize: (state) => ({ mockMode: state.mockMode, printMode: state.printMode, paperWidth: state.paperWidth }),
-      onRehydrateStorage: () => (state) => {
-        if (state?.mockMode) {
-          printerService.setMock(true);
-        }
-      },
+      partialize: (state) => ({ printMode: state.printMode, paperWidth: state.paperWidth, printMethod: state.printMethod }),
     }
   )
 );
 
-/**
- * Subscribe the store to live status updates from the PrinterService singleton.
- */
 export function usePrinterStatusSync(): void {
   const store = usePrinterStore();
 
@@ -159,7 +156,6 @@ export function usePrinterStatusSync(): void {
     usePrinterStore.setState({
       status: printerService.status,
       deviceInfo: printerService.deviceInfo,
-      mockMode: printerService.isMock,
     });
 
     const unsub = printerService.onStatusChange((status, info) => {
@@ -170,6 +166,5 @@ export function usePrinterStatusSync(): void {
     });
 
     return unsub;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }

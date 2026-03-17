@@ -2,7 +2,7 @@
 
 /**
  * PrinterStatus — toolbar button that shows printer connection state and
- * exposes connect / disconnect / mock-toggle actions.
+ * exposes connect / disconnect actions.
  *
  * Place it in the POS page header or sidebar header alongside other toolbar
  * icons.  Example:
@@ -18,11 +18,10 @@ import {
   PrinterCheck,
   PrinterX,
   Loader2,
-  FlaskConical,
+  Usb,
+  Globe,
   Unplug,
   ChevronDown,
-  Download,
-  Clipboard,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,9 +36,6 @@ import { usePrinterStore, usePrinterStatusSync } from '@/hooks/usePrinter';
 import type { PrinterStatus } from '@/lib/printer/PrinterService';
 import toast from 'react-hot-toast';
 
-// ---------------------------------------------------------------------------
-// Visual config per status
-// ---------------------------------------------------------------------------
 const STATUS_CONFIG: Record<
   PrinterStatus,
   { label: string; color: string; Icon: React.ElementType }
@@ -64,24 +60,15 @@ const STATUS_CONFIG: Record<
     color: 'text-red-500',
     Icon: PrinterX,
   },
-  mock: {
-    label: 'Mock Mode',
-    color: 'text-purple-500',
-    Icon: FlaskConical,
-  },
 };
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 export default function PrinterStatus() {
-  // Sync live events from the PrinterService singleton into the store.
   usePrinterStatusSync();
 
   const {
-    status, deviceInfo, mockMode, lastError, lastPrintedBytes,
-    connect, disconnect, toggleMock, clearError,
-    downloadLastReceipt, copyLastReceiptHex,
+    status, deviceInfo, lastError,
+    connect, disconnect, clearError,
+    printMethod, setPrintMethod,
   } = usePrinterStore();
 
   const cfg = STATUS_CONFIG[status];
@@ -126,10 +113,9 @@ export default function PrinterStatus() {
 
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="text-xs text-gray-500">
-          Receipt Printer (Serial)
+          Receipt Printer (WebUSB)
         </DropdownMenuLabel>
 
-        {/* Device info when connected */}
         {isConnected && deviceInfo && (
           <div className="px-2 py-1.5 text-xs text-gray-500 border-b border-gray-100">
             <p className="font-medium text-gray-700 truncate">
@@ -139,7 +125,6 @@ export default function PrinterStatus() {
           </div>
         )}
 
-        {/* Error message */}
         {lastError && (
           <div className="px-2 py-1.5 text-xs text-red-600 bg-red-50 rounded mx-1 my-1">
             {lastError}
@@ -148,70 +133,67 @@ export default function PrinterStatus() {
 
         <DropdownMenuSeparator />
 
-        {/* Connect — only when not already connected or in mock mode */}
-        {!isConnected && !mockMode && (
-          <DropdownMenuItem
-            onClick={handleConnect}
-            disabled={isConnecting}
-            className="text-sm cursor-pointer"
-          >
-            <Printer size={14} className="mr-2" />
-            {isConnecting ? 'Connecting…' : 'Select Serial Port'}
-          </DropdownMenuItem>
-        )}
+        <DropdownMenuLabel className="text-xs text-gray-500">
+          Print Method
+        </DropdownMenuLabel>
 
-        {/* Disconnect */}
-        {isConnected && (
-          <DropdownMenuItem
-            onClick={handleDisconnect}
-            className="text-sm cursor-pointer text-red-600 focus:text-red-600"
-          >
-            <Unplug size={14} className="mr-2" />
-            Disconnect
-          </DropdownMenuItem>
-        )}
-
-        <DropdownMenuSeparator />
-
-        {/* Mock mode toggle */}
         <DropdownMenuItem
-          onClick={toggleMock}
-          className="text-sm cursor-pointer"
+          onClick={() => setPrintMethod('escpos')}
+          className={`text-sm cursor-pointer ${printMethod === 'escpos' ? 'bg-brand/5 text-brand' : ''}`}
         >
-          <FlaskConical size={14} className="mr-2 text-purple-500" />
-          {mockMode ? 'Disable Mock Mode' : 'Enable Mock Mode'}
-          {mockMode && (
-            <span className="ml-auto text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">
-              ON
+          <Usb size={14} className="mr-2" />
+          ESCPOS (USB)
+          {printMethod === 'escpos' && (
+            <span className="ml-auto text-xs bg-brand/10 text-brand px-1.5 py-0.5 rounded">
+              Active
             </span>
           )}
         </DropdownMenuItem>
 
-        {/* Capture actions — only visible in mock mode after a print */}
-        {mockMode && lastPrintedBytes && (
+        <DropdownMenuItem
+          onClick={() => setPrintMethod('browser')}
+          className={`text-sm cursor-pointer ${printMethod === 'browser' ? 'bg-brand/5 text-brand' : ''}`}
+        >
+          <Globe size={14} className="mr-2" />
+          Browser Print
+          {printMethod === 'browser' && (
+            <span className="ml-auto text-xs bg-brand/10 text-brand px-1.5 py-0.5 rounded">
+              Active
+            </span>
+          )}
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
+        {printMethod === 'escpos' && (
           <>
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-xs text-gray-500">
-              Last receipt ({lastPrintedBytes.length} bytes)
-            </DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={downloadLastReceipt}
-              className="text-sm cursor-pointer"
-            >
-              <Download size={14} className="mr-2 text-purple-500" />
-              Download .bin
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={async () => {
-                await copyLastReceiptHex();
-                toast.success('Hex copied — paste into an ESC/POS viewer');
-              }}
-              className="text-sm cursor-pointer"
-            >
-              <Clipboard size={14} className="mr-2 text-purple-500" />
-              Copy hex to clipboard
-            </DropdownMenuItem>
+            {!isConnected && !isConnecting && (
+              <DropdownMenuItem
+                onClick={handleConnect}
+                disabled={isConnecting}
+                className="text-sm cursor-pointer"
+              >
+                <Printer size={14} className="mr-2" />
+                {isConnecting ? 'Connecting…' : 'Connect USB Printer'}
+              </DropdownMenuItem>
+            )}
+
+            {isConnected && (
+              <DropdownMenuItem
+                onClick={handleDisconnect}
+                className="text-sm cursor-pointer text-red-600 focus:text-red-600"
+              >
+                <Unplug size={14} className="mr-2" />
+                Disconnect
+              </DropdownMenuItem>
+            )}
           </>
+        )}
+
+        {printMethod === 'browser' && (
+          <div className="px-2 py-1.5 text-xs text-gray-500">
+            Uses browser print dialog. Works with any printer connected to your computer.
+          </div>
         )}
       </DropdownMenuContent>
     </DropdownMenu>

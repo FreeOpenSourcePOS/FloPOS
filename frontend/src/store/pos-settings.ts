@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 export type PaperSize = 'thermal58' | 'thermal80' | 'a4' | 'a5';
+export type PrinterPrintMode = 'escpos' | 'browser';
 
 interface PosSettingsState {
   showProductImages: boolean;
@@ -10,6 +11,7 @@ interface PosSettingsState {
   // Printer settings
   printerPaperSize: PaperSize;
   printerEnabled: boolean;
+  printerPrintMode: PrinterPrintMode;
   autoPrintKot: boolean;
   autoPrintBill: boolean;
   whatsappShareEnabled: boolean;
@@ -23,6 +25,7 @@ interface PosSettingsState {
   setPhoneDigits: (digits: number) => void;
   setPrinterPaperSize: (size: PaperSize) => void;
   setPrinterEnabled: (enabled: boolean) => void;
+  setPrinterPrintMode: (mode: PrinterPrintMode) => void;
   setAutoPrintKot: (enabled: boolean) => void;
   setAutoPrintBill: (enabled: boolean) => void;
   setWhatsappShareEnabled: (enabled: boolean) => void;
@@ -40,6 +43,7 @@ export const usePosSettingsStore = create<PosSettingsState>()(
       // Printer defaults
       printerPaperSize: 'thermal58',
       printerEnabled: false,
+      printerPrintMode: 'escpos',
       autoPrintKot: false,
       autoPrintBill: false,
       whatsappShareEnabled: true,
@@ -53,6 +57,7 @@ export const usePosSettingsStore = create<PosSettingsState>()(
       setPhoneDigits: (digits) => set({ phoneDigits: digits }),
       setPrinterPaperSize: (size) => set({ printerPaperSize: size }),
       setPrinterEnabled: (enabled) => set({ printerEnabled: enabled }),
+      setPrinterPrintMode: (mode) => set({ printerPrintMode: mode }),
       setAutoPrintKot: (enabled) => set({ autoPrintKot: enabled }),
       setAutoPrintBill: (enabled) => set({ autoPrintBill: enabled }),
       setWhatsappShareEnabled: (enabled) => set({ whatsappShareEnabled: enabled }),

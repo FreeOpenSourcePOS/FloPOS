@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Printer, FileText, MessageCircle, Download } from 'lucide-react';
+import { Printer, FileText, MessageCircle, Download, Usb, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePrinterStore } from '@/hooks/usePrinter';
+import { printerService } from '@/lib/printer/PrinterService';
 import { createTestBill, createTestOrder, createTestTenant, createTestCustomer } from '@/lib/printer/test-data';
 import { printWebBill, generateBillHtml } from '@/lib/printer/web-print';
 import { shareBillViaWhatsApp, getWhatsAppMessage } from '@/lib/whatsapp-share';
@@ -17,7 +18,7 @@ export default function PrintTestPage() {
   const [paperWidth, setPaperWidth] = useState<PaperWidth>(58);
   const [testing, setTesting] = useState(false);
 
-  const { printBill, printGstBill, printKot, mockMode, toggleMock, downloadLastReceipt, lastPrintedBytes } = usePrinterStore();
+  const { printBill, printGstBill, printKot, printMethod, setPrintMethod, downloadLastReceipt, lastPrintedBytes, status } = usePrinterStore();
 
   const testBill = createTestBill();
   const testOrder = createTestOrder();
@@ -29,21 +30,43 @@ export default function PrintTestPage() {
     try {
       switch (testMode) {
         case 'receipt':
-          await printBill(testBill, testTenant, { paperWidth });
-          toast.success('Receipt printed!');
+          if (printMethod === 'browser') {
+            const html = generateThermalReceiptHtml(testBill, testTenant, paperWidth);
+            await printerService.printViaBrowser(html, paperWidth);
+            toast.success('Browser print dialog opened!');
+          } else {
+            await printBill(testBill, testTenant, { paperWidth });
+            toast.success('Receipt printed!');
+          }
           break;
         case 'gst':
-          await printGstBill(testBill, testTenant, {
-            paperWidth,
-            gstin: '22AAAAA0000A1Z5',
-            address: '123 Main Street, Mumbai - 400001',
-            phone: '+91 9876543210',
-          });
-          toast.success('GST Bill printed!');
+          if (printMethod === 'browser') {
+            const html = generateThermalReceiptHtml(testBill, testTenant, paperWidth, {
+              gstin: '22AAAAA0000A1Z5',
+              address: '123 Main Street, Mumbai - 400001',
+              phone: '+91 9876543210',
+            });
+            await printerService.printViaBrowser(html, paperWidth);
+            toast.success('Browser print dialog opened!');
+          } else {
+            await printGstBill(testBill, testTenant, {
+              paperWidth,
+              gstin: '22AAAAA0000A1Z5',
+              address: '123 Main Street, Mumbai - 400001',
+              phone: '+91 9876543210',
+            });
+            toast.success('GST Bill printed!');
+          }
           break;
         case 'kot':
-          await printKot(testOrder, { paperWidth });
-          toast.success('KOT printed!');
+          if (printMethod === 'browser') {
+            const html = generateKotHtml(testOrder, paperWidth);
+            await printerService.printViaBrowser(html, paperWidth);
+            toast.success('Browser print dialog opened!');
+          } else {
+            await printKot(testOrder, { paperWidth });
+            toast.success('KOT printed!');
+          }
           break;
         case 'web-a4':
           printWebBill(testBill, testTenant, { paperSize: 'a4', includeGst: true });
@@ -168,31 +191,49 @@ export default function PrintTestPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-gray-900">Mock Mode</p>
-                <p className="text-sm text-gray-500">Print to console without printer</p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Print Method
+              </label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPrintMethod('escpos')}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                    printMethod === 'escpos'
+                      ? 'border-brand bg-brand/5 text-brand'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <Usb size={16} />
+                  ESCPOS (USB)
+                </button>
+                <button
+                  onClick={() => setPrintMethod('browser')}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+                    printMethod === 'browser'
+                      ? 'border-brand bg-brand/5 text-brand'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <Globe size={16} />
+                  Browser Print
+                </button>
               </div>
-              <button
-                onClick={toggleMock}
-                className={`relative w-11 h-6 rounded-full transition-colors ${
-                  mockMode ? 'bg-purple-500' : 'bg-gray-300'
-                }`}
-              >
-                <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                  mockMode ? 'translate-x-5' : 'translate-x-0'
-                }`} />
-              </button>
+              <p className="text-xs text-gray-500 mt-2">
+                {printMethod === 'escpos' 
+                  ? `Status: ${status} - Direct USB printing via WebUSB`
+                  : 'Uses browser print dialog - works with any printer connected to computer'}
+              </p>
             </div>
 
-            {mockMode && lastPrintedBytes && (
-              <div className="p-3 bg-purple-50 rounded-lg">
-                <p className="text-sm text-purple-700">
+            {printMethod === 'escpos' && lastPrintedBytes && (
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <p className="text-sm text-gray-600">
                   Last printed: {lastPrintedBytes.length} bytes
                 </p>
                 <button
                   onClick={downloadLastReceipt}
-                  className="mt-2 text-sm text-purple-600 hover:text-purple-800 flex items-center gap-1"
+                  className="mt-2 text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
                 >
                   <Download size={14} /> Download .bin
                 </button>
@@ -247,4 +288,114 @@ export default function PrintTestPage() {
       </div>
     </div>
   );
+}
+
+function generateThermalReceiptHtml(
+  bill: ReturnType<typeof createTestBill>,
+  tenant: ReturnType<typeof createTestTenant>,
+  paperWidth: 58 | 80,
+  options?: { gstin?: string; address?: string; phone?: string }
+): string {
+  const fontSize = paperWidth === 58 ? '10px' : '12px';
+  const padding = paperWidth === 58 ? '4px' : '6px';
+  
+  const formatCurrency = (amount: number) => `₹${amount.toFixed(2)}`;
+  
+  const items = bill.order?.items || [];
+  const rows = items.map((item, idx) => `
+    <tr>
+      <td style="font-size:${fontSize};padding:${padding};">${idx + 1}. ${item.product_name}</td>
+      <td style="font-size:${fontSize};padding:${padding};text-align:right;">${item.quantity}</td>
+      <td style="font-size:${fontSize};padding:${padding};text-align:right;">${formatCurrency(item.unit_price)}</td>
+      <td style="font-size:${fontSize};padding:${padding};text-align:right;">${formatCurrency(item.subtotal)}</td>
+    </tr>
+  `).join('');
+
+  const cgst = bill.tax_breakdown?.find(t => t.title === 'CGST')?.amount || 0;
+  const sgst = bill.tax_breakdown?.find(t => t.title === 'SGST')?.amount || 0;
+
+  return `
+    <div style="text-align:center;padding:${padding};font-family:'Courier New',monospace;font-size:${fontSize};">
+      <h2 style="margin:0;font-size:${paperWidth === 58 ? '14px' : '16px'};">${tenant.business_name}</h2>
+      ${options?.address ? `<p style="margin:2px 0;font-size:${fontSize};">${options.address}</p>` : ''}
+      ${options?.phone ? `<p style="margin:2px 0;font-size:${fontSize};">${options.phone}</p>` : ''}
+      ${options?.gstin ? `<p style="margin:2px 0;font-size:${fontSize};">GSTIN: ${options.gstin}</p>` : ''}
+      <hr style="border:1px dashed #000;margin:4px 0;">
+      <p style="margin:2px 0;">Bill #: ${bill.bill_number}</p>
+      <p style="margin:2px 0;">${new Date().toLocaleString()}</p>
+      <hr style="border:1px dashed #000;margin:4px 0;">
+      <table style="width:100%;border-collapse:collapse;font-size:${fontSize};">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:${padding};">Item</th>
+            <th style="text-align:right;padding:${padding};">Qty</th>
+            <th style="text-align:right;padding:${padding};">Rate</th>
+            <th style="text-align:right;padding:${padding};">Amt</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+      <hr style="border:1px dashed #000;margin:4px 0;">
+      <table style="width:100%;font-size:${fontSize};">
+        <tr>
+          <td style="padding:${padding};">Subtotal</td>
+          <td style="text-align:right;padding:${padding};">${formatCurrency(bill.subtotal)}</td>
+        </tr>
+        ${bill.discount_amount > 0 ? `
+        <tr>
+          <td style="padding:${padding};">Discount</td>
+          <td style="text-align:right;padding:${padding};">-${formatCurrency(bill.discount_amount)}</td>
+        </tr>
+        ` : ''}
+        <tr>
+          <td style="padding:${padding};">CGST</td>
+          <td style="text-align:right;padding:${padding};">${formatCurrency(cgst)}</td>
+        </tr>
+        <tr>
+          <td style="padding:${padding};">SGST</td>
+          <td style="text-align:right;padding:${padding};">${formatCurrency(sgst)}</td>
+        </tr>
+        <tr style="font-weight:bold;">
+          <td style="padding:${padding};">TOTAL</td>
+          <td style="text-align:right;padding:${padding};">${formatCurrency(bill.total)}</td>
+        </tr>
+      </table>
+      <hr style="border:1px dashed #000;margin:8px 0;">
+      <p style="margin:4px 0;font-size:${fontSize};">Thank you for visiting!</p>
+      <p style="margin:4px 0;font-size:${fontSize};">Please visit again</p>
+    </div>
+  `;
+}
+
+function generateKotHtml(
+  order: ReturnType<typeof createTestOrder>,
+  paperWidth: 58 | 80
+): string {
+  const fontSize = paperWidth === 58 ? '10px' : '12px';
+  const padding = paperWidth === 58 ? '4px' : '6px';
+  
+  const items = order.items || [];
+  const rows = items.map((item, idx) => `
+    <tr>
+      <td style="font-size:${fontSize};padding:${padding};">${idx + 1}. ${item.product_name}</td>
+      <td style="font-size:${fontSize};padding:${padding};text-align:right;font-weight:bold;">${item.quantity}</td>
+    </tr>
+  `).join('');
+
+  return `
+    <div style="text-align:center;padding:${padding};font-family:'Courier New',monospace;font-size:${fontSize};">
+      <h2 style="margin:0;font-size:${paperWidth === 58 ? '14px' : '16px'};">KOT</h2>
+      <p style="margin:2px 0;">Order #: ${order.order_number}</p>
+      <p style="margin:2px 0;">${new Date(order.created_at).toLocaleString()}</p>
+      <hr style="border:1px dashed #000;margin:4px 0;">
+      <table style="width:100%;border-collapse:collapse;font-size:${fontSize};">
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+      <hr style="border:1px dashed #000;margin:8px 0;">
+    </div>
+  `;
 }

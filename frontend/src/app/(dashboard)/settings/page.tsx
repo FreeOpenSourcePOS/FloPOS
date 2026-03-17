@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/store/auth';
-import { usePosSettingsStore, type PaperSize } from '@/store/pos-settings';
+import { usePosSettingsStore, type PaperSize, type PrinterPrintMode } from '@/store/pos-settings';
 import { Settings, Building2, Globe, CreditCard, Monitor, Users, Gift, Printer, Share2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -270,6 +270,23 @@ export default function SettingsPage() {
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <p className="font-medium text-gray-900 mb-2">Print Mode</p>
+              <select
+                value={posSettings.printerPrintMode}
+                onChange={(e) => posSettings.setPrinterPrintMode(e.target.value as PrinterPrintMode)}
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-brand"
+              >
+                <option value="escpos">ESCPOS (USB Printer)</option>
+                <option value="browser">Browser Print (Normal)</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                {posSettings.printerPrintMode === 'escpos' 
+                  ? 'Direct USB printing via WebUSB'
+                  : 'Opens browser print dialog - works with any printer'}
+              </p>
             </div>
 
             <div className="flex items-center justify-between">
