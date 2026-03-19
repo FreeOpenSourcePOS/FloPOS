@@ -18,8 +18,6 @@ import {
   PrinterCheck,
   PrinterX,
   Loader2,
-  Usb,
-  Globe,
   Unplug,
   ChevronDown,
 } from 'lucide-react';
@@ -68,7 +66,7 @@ export default function PrinterStatus() {
   const {
     status, deviceInfo, lastError,
     connect, disconnect, clearError,
-    printMethod, setPrintMethod,
+    printMethod,
   } = usePrinterStore();
 
   const cfg = STATUS_CONFIG[status];
@@ -111,9 +109,9 @@ export default function PrinterStatus() {
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-52">
         <DropdownMenuLabel className="text-xs text-gray-500">
-          Receipt Printer (WebUSB)
+          Receipt Printer
         </DropdownMenuLabel>
 
         {isConnected && deviceInfo && (
@@ -130,38 +128,6 @@ export default function PrinterStatus() {
             {lastError}
           </div>
         )}
-
-        <DropdownMenuSeparator />
-
-        <DropdownMenuLabel className="text-xs text-gray-500">
-          Print Method
-        </DropdownMenuLabel>
-
-        <DropdownMenuItem
-          onClick={() => setPrintMethod('escpos')}
-          className={`text-sm cursor-pointer ${printMethod === 'escpos' ? 'bg-brand/5 text-brand' : ''}`}
-        >
-          <Usb size={14} className="mr-2" />
-          ESCPOS (USB)
-          {printMethod === 'escpos' && (
-            <span className="ml-auto text-xs bg-brand/10 text-brand px-1.5 py-0.5 rounded">
-              Active
-            </span>
-          )}
-        </DropdownMenuItem>
-
-        <DropdownMenuItem
-          onClick={() => setPrintMethod('browser')}
-          className={`text-sm cursor-pointer ${printMethod === 'browser' ? 'bg-brand/5 text-brand' : ''}`}
-        >
-          <Globe size={14} className="mr-2" />
-          Browser Print
-          {printMethod === 'browser' && (
-            <span className="ml-auto text-xs bg-brand/10 text-brand px-1.5 py-0.5 rounded">
-              Active
-            </span>
-          )}
-        </DropdownMenuItem>
 
         <DropdownMenuSeparator />
 
@@ -192,7 +158,7 @@ export default function PrinterStatus() {
 
         {printMethod === 'browser' && (
           <div className="px-2 py-1.5 text-xs text-gray-500">
-            Uses browser print dialog. Works with any printer connected to your computer.
+            Browser print mode — change in Settings
           </div>
         )}
       </DropdownMenuContent>

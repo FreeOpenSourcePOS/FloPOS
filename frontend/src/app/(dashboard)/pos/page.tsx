@@ -28,7 +28,7 @@ export default function POSPage() {
   const isRestaurant = (currentTenant?.business_type ?? 'restaurant') === 'restaurant';
   const cart = useCartStore();
   const heldOrders = useHeldOrdersStore();
-  const { customerMandatory } = usePosSettingsStore();
+  const { customerMandatory, autoPrintKot } = usePosSettingsStore();
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -47,7 +47,7 @@ export default function POSPage() {
   const [showCustomerPrompt, setShowCustomerPrompt] = useState(false);
 
   const currency = currentTenant?.currency === 'THB' ? '฿' : '₹';
-  const { printBill } = usePrinterStore();
+  const { printBill, printKot } = usePrinterStore();
 
   const refreshTables = async () => {
     if (!isRestaurant) return;
@@ -125,6 +125,14 @@ export default function POSPage() {
       setMobileCartOpen(false);
       await refreshTables();
       setShowPaymentPrompt({ orderId: data.order.id });
+
+      if (autoPrintKot) {
+        try {
+          await printKot(data.order as Order);
+        } catch {
+          toast.error('KOT print failed — check printer connection');
+        }
+      }
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
       toast.error(error.response?.data?.message || 'Failed to place order');

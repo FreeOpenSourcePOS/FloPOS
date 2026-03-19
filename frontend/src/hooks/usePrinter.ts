@@ -4,7 +4,13 @@ import { useEffect } from 'react';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { printerService, type PrinterStatus, type PrinterInfo, type PrintMode } from '@/lib/printer/PrinterService';
-import { buildReceiptBytes, type ReceiptOptions } from '@/lib/printer/receipt-encoder';
+import {
+  buildClassicReceiptBytes,
+  buildCompactReceiptBytes,
+  buildDetailedReceiptBytes,
+  type ReceiptOptions,
+} from '@/lib/printer/receipt-encoder';
+import { usePosSettingsStore } from '@/store/pos-settings';
 import { buildGstBillBytes, type GstBillOptions } from '@/lib/printer/gst-bill-encoder';
 import { buildKotBytes, type KotOptions } from '@/lib/printer/kot-encoder';
 import type { Bill, Tenant, Order } from '@/lib/types';
@@ -62,9 +68,35 @@ export const usePrinterStore = create<PrinterState>()(
         set({ lastError: null });
         try {
           const { paperWidth } = get();
-          const bytes = buildReceiptBytes(bill, tenant, { ...opts, paperWidth });
+          const {
+            billTemplate,
+            billGstin,
+            billAddress,
+            billPhone,
+            billFooterMessage,
+          } = usePosSettingsStore.getState();
+
+          const builderOpts: ReceiptOptions = {
+            ...opts,
+            paperWidth,
+            gstin: billGstin || undefined,
+            address: billAddress || undefined,
+            phone: billPhone || undefined,
+            footerNote: billFooterMessage || undefined,
+            showTaxBreakdown: true,
+          };
+
+          let bytes: Uint8Array;
+          if (billTemplate === 'compact') {
+            bytes = buildCompactReceiptBytes(bill, tenant, builderOpts);
+          } else if (billTemplate === 'detailed') {
+            bytes = buildDetailedReceiptBytes(bill, tenant, builderOpts);
+          } else {
+            bytes = buildClassicReceiptBytes(bill, tenant, builderOpts);
+          }
+
           set({ lastPrintedBytes: bytes });
-          
+
           if (get().printMethod === 'escpos') {
             await printerService.print(bytes);
           } else {

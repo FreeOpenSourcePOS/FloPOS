@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 
 export type PaperSize = 'thermal58' | 'thermal80' | 'a4' | 'a5';
 export type PrinterPrintMode = 'escpos' | 'browser';
+export type BillTemplate = 'classic' | 'compact' | 'detailed';
 
 interface PosSettingsState {
   showProductImages: boolean;
@@ -19,6 +20,12 @@ interface PosSettingsState {
   defaultPrintMode: 'thermal' | 'web';
   webPrintSize: PaperSize;
   includeGstOnBill: boolean;
+  // Bill template settings
+  billTemplate: BillTemplate;
+  billFooterMessage: string;
+  billGstin: string;
+  billAddress: string;
+  billPhone: string;
   // Actions
   setShowProductImages: (show: boolean) => void;
   setCustomerMandatory: (mandatory: boolean) => void;
@@ -32,6 +39,11 @@ interface PosSettingsState {
   setDefaultPrintMode: (mode: 'thermal' | 'web') => void;
   setWebPrintSize: (size: PaperSize) => void;
   setIncludeGstOnBill: (include: boolean) => void;
+  setBillTemplate: (t: BillTemplate) => void;
+  setBillFooterMessage: (m: string) => void;
+  setBillGstin: (g: string) => void;
+  setBillAddress: (a: string) => void;
+  setBillPhone: (p: string) => void;
 }
 
 export const usePosSettingsStore = create<PosSettingsState>()(
@@ -51,6 +63,12 @@ export const usePosSettingsStore = create<PosSettingsState>()(
       defaultPrintMode: 'thermal',
       webPrintSize: 'a4',
       includeGstOnBill: false,
+      // Bill template defaults
+      billTemplate: 'classic',
+      billFooterMessage: '',
+      billGstin: '',
+      billAddress: '',
+      billPhone: '',
       // Actions
       setShowProductImages: (show) => set({ showProductImages: show }),
       setCustomerMandatory: (mandatory) => set({ customerMandatory: mandatory }),
@@ -64,6 +82,11 @@ export const usePosSettingsStore = create<PosSettingsState>()(
       setDefaultPrintMode: (mode) => set({ defaultPrintMode: mode }),
       setWebPrintSize: (size) => set({ webPrintSize: size }),
       setIncludeGstOnBill: (include) => set({ includeGstOnBill: include }),
+      setBillTemplate: (t) => set({ billTemplate: t }),
+      setBillFooterMessage: (m) => set({ billFooterMessage: m }),
+      setBillGstin: (g) => set({ billGstin: g }),
+      setBillAddress: (a) => set({ billAddress: a }),
+      setBillPhone: (p) => set({ billPhone: p }),
     }),
     { name: 'pos-settings' }
   )

@@ -27,11 +27,11 @@ type StatusListener = (status: PrinterStatus, info?: PrinterInfo) => void;
 
 const ESCPOS_USB_CLASS = 0x07;
 const PRINTER_INTERFACE = 0;
-const PRINTER_ENDPOINT_OUT = 0x01;
 
 class PrinterService {
   private device: USBDevice | null = null;
   private interfaceClaimed = false;
+  private endpointOut = 0x01; // discovered dynamically on connect()
   private _status: PrinterStatus = 'disconnected';
   private _printMode: PrintMode = 'escpos';
   private listeners: Set<StatusListener> = new Set();
@@ -131,6 +131,11 @@ class PrinterService {
         if (alt?.interfaceClass === ESCPOS_USB_CLASS) {
           await this.device.claimInterface(iface.interfaceNumber);
           this.interfaceClaimed = true;
+          // Discover the bulk-OUT endpoint number from the descriptor
+          const outEndpoint = alt.endpoints.find(
+            (ep) => ep.type === 'bulk' && ep.direction === 'out'
+          );
+          if (outEndpoint) this.endpointOut = outEndpoint.endpointNumber;
           break;
         }
       }
@@ -165,6 +170,7 @@ class PrinterService {
 
       this.device = null;
       this.interfaceClaimed = false;
+      this.endpointOut = 0x01;
     }
 
     this.setStatus('disconnected');
@@ -184,7 +190,10 @@ class PrinterService {
     }
 
     try {
-      await this.device.transferOut(PRINTER_ENDPOINT_OUT, data.buffer as ArrayBuffer);
+      // Copy to a fresh ArrayBuffer covering exactly the encoder's bytes,
+      // which avoids sending garbage if the Uint8Array is a subarray view.
+      const buf = new Uint8Array(data).buffer as ArrayBuffer;
+      await this.device.transferOut(this.endpointOut, buf);
     } catch (err) {
       throw new Error(`Print failed: ${(err as Error).message}`);
     }
