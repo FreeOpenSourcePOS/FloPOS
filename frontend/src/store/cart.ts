@@ -1,11 +1,12 @@
 import { create } from 'zustand';
-import type { Product, Addon, CartItem } from '@/lib/types';
+import type { Customer, Product, Addon, CartItem } from '@/lib/types';
 
 interface CartState {
   items: CartItem[];
   orderType: 'dine_in' | 'takeaway' | 'delivery' | 'online';
   tableId: number | null;
   customerId: number | null;
+  customer: Customer | null;
   guestCount: number;
 
   addItem: (product: Product, quantity?: number, addons?: Addon[], specialInstructions?: string) => void;
@@ -16,6 +17,7 @@ interface CartState {
   setOrderType: (type: CartState['orderType']) => void;
   setTableId: (id: number | null) => void;
   setCustomerId: (id: number | null) => void;
+  setCustomer: (customer: Customer | null) => void;
   setGuestCount: (count: number) => void;
 
   subtotal: () => number;
@@ -38,6 +40,7 @@ export const useCartStore = create<CartState>((set, get) => ({
   orderType: 'dine_in',
   tableId: null,
   customerId: null,
+  customer: null,
   guestCount: 1,
 
   addItem: (product, quantity = 1, addons = [], specialInstructions = '') => {
@@ -75,7 +78,7 @@ export const useCartStore = create<CartState>((set, get) => ({
   },
 
   clearCart: () => {
-    set({ items: [], tableId: null, customerId: null, guestCount: 1 });
+    set({ items: [], tableId: null, customerId: null, customer: null, guestCount: 1 });
   },
 
   loadItems: (items, tableId, customerId, guestCount) => {
@@ -85,6 +88,7 @@ export const useCartStore = create<CartState>((set, get) => ({
   setOrderType: (type) => set({ orderType: type }),
   setTableId: (id) => set({ tableId: id }),
   setCustomerId: (id) => set({ customerId: id }),
+  setCustomer: (customer) => set({ customer, customerId: customer?.id ?? null }),
   setGuestCount: (count) => set({ guestCount: count }),
 
   subtotal: () => {

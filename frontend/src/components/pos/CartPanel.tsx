@@ -2,13 +2,12 @@
 
 import {
   ShoppingCart, UtensilsCrossed, Package, Truck, Globe,
-  Plus, Minus, Trash2, Pause,
+  Plus, Minus, Trash2, Pause, X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCartStore } from '@/store/cart';
 import { useHeldOrdersStore } from '@/store/held-orders';
 import { useAuthStore } from '@/store/auth';
-import CustomerSearch from './CustomerSearch';
 import toast from 'react-hot-toast';
 import type { Table } from '@/lib/types';
 
@@ -92,7 +91,19 @@ export default function CartPanel({ tables, currency, submitting, onPlaceOrder, 
           </button>
         )}
 
-        <CustomerSearch />
+        {cart.customer ? (
+          <div className="flex items-center justify-between px-3 py-2 bg-brand-light rounded-lg text-sm mb-2">
+            <div className="min-w-0">
+              <span className="font-medium text-brand truncate block">{cart.customer.name}</span>
+              <span className="text-brand/70 text-xs">{cart.customer.phone}</span>
+            </div>
+            <button onClick={() => cart.setCustomer(null)} className="text-brand hover:text-brand-hover ml-2 shrink-0">
+              <X size={14} />
+            </button>
+          </div>
+        ) : (
+          <p className="text-xs text-gray-400 text-center py-1 mb-2">No customer selected</p>
+        )}
       </div>
 
       {/* Cart Items */}

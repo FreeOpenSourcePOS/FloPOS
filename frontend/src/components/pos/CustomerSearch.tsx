@@ -10,14 +10,14 @@ import type { Customer } from '@/lib/types';
 
 interface Props {
   onSelected?: () => void;
+  variant?: 'default' | 'topbar';
 }
 
-export default function CustomerSearch({ onSelected }: Props = {}) {
+export default function CustomerSearch({ onSelected, variant = 'default' }: Props = {}) {
   const cart = useCartStore();
   const { phoneDigits } = usePosSettingsStore();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Customer[]>([]);
-  const [selected, setSelected] = useState<Customer | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
@@ -26,6 +26,18 @@ export default function CustomerSearch({ onSelected }: Props = {}) {
   const [creating, setCreating] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  const customer = cart.customer;
+
+  // Auto-fetch customer when customerId is set but customer object is missing (e.g. held order restore)
+  useEffect(() => {
+    if (cart.customerId && !cart.customer) {
+      api.get(`/customers/${cart.customerId}`)
+        .then(res => cart.setCustomer(res.data.customer))
+        .catch(() => {});
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart.customerId]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -49,17 +61,15 @@ export default function CustomerSearch({ onSelected }: Props = {}) {
     }, 300);
   };
 
-  const handleSelect = (customer: Customer) => {
-    setSelected(customer);
-    cart.setCustomerId(customer.id);
+  const handleSelect = (c: Customer) => {
+    cart.setCustomer(c);
     setShowDropdown(false);
     setQuery('');
     onSelected?.();
   };
 
   const handleClear = () => {
-    setSelected(null);
-    cart.setCustomerId(null);
+    cart.setCustomer(null);
   };
 
   const handleCreate = async () => {
@@ -87,10 +97,29 @@ export default function CustomerSearch({ onSelected }: Props = {}) {
     }
   };
 
-  if (selected) {
+  if (customer) {
+    if (variant === 'topbar') {
+      return (
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-brand-light rounded-lg text-sm min-w-0 w-full">
+          <div className="flex-1 min-w-0 flex items-center gap-x-2 gap-y-0 flex-wrap">
+            <span className="font-semibold text-brand truncate">{customer.name}</span>
+            <span className="text-brand/70 text-xs shrink-0">{customer.phone}</span>
+            {customer.visits_count > 0 && (
+              <span className="text-xs bg-white/60 text-brand px-1.5 py-0.5 rounded-full shrink-0 hidden sm:inline">
+                {customer.visits_count} visits
+              </span>
+            )}
+          </div>
+          <button onClick={handleClear} className="text-brand hover:text-brand-hover shrink-0 ml-auto">
+            <X size={14} />
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="flex items-center justify-between px-3 py-2 bg-brand-light rounded-lg text-sm">
-        <span className="font-medium text-brand truncate">{selected.name}</span>
+        <span className="font-medium text-brand truncate">{customer.name}</span>
         <button onClick={handleClear} className="text-brand hover:text-brand-hover ml-2 shrink-0">
           <X size={14} />
         </button>
@@ -107,7 +136,7 @@ export default function CustomerSearch({ onSelected }: Props = {}) {
           value={query}
           onChange={(e) => { setQuery(e.target.value); searchCustomers(e.target.value); setShowDropdown(true); }}
           onFocus={() => setShowDropdown(true)}
-          placeholder="Search customer..."
+          placeholder="Phone or name..."
           className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand focus:border-brand outline-none"
         />
       </div>

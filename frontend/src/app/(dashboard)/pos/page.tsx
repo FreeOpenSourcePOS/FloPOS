@@ -20,7 +20,7 @@ import CustomerSearch from '@/components/pos/CustomerSearch';
 import TablePickerModal from '@/components/pos/TablePickerModal';
 import TableCheckoutModal from '@/components/pos/TableCheckoutModal';
 import PaymentModal from '@/components/pos/PaymentModal';
-import PrinterStatus from '@/components/pos/PrinterStatus';
+import PosTopbar from '@/components/pos/PosTopbar';
 import { usePrinterStore } from '@/hooks/usePrinter';
 
 export default function POSPage() {
@@ -209,13 +209,12 @@ export default function POSPage() {
 
   return (
     <>
-    <div className="flex h-full overflow-hidden">
+    <PosTopbar />
+
+    {/* Main content area */}
+    <div className="flex flex-1 min-h-0 overflow-hidden p-4 gap-4">
       {/* Product Grid — full width on mobile, flex-1 on desktop */}
       <div className="flex-1 min-w-0 h-full flex flex-col">
-        {/* Toolbar: printer status lives here so connect() fires on user click */}
-        <div className="flex justify-end mb-2 shrink-0">
-          <PrinterStatus />
-        </div>
         <ProductGrid
           categories={categories}
           products={products}
@@ -229,7 +228,7 @@ export default function POSPage() {
       </div>
 
       {/* Desktop Cart — hidden on mobile */}
-      <div className="hidden md:flex md:w-80 md:shrink-0 md:ml-4 h-full">
+      <div className="hidden md:flex md:w-80 md:shrink-0 h-full">
         <CartPanel {...cartPanelProps} />
       </div>
     </div>
