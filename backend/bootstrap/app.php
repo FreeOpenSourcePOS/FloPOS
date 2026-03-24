@@ -14,6 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'tenant' => \App\Http\Middleware\TenantDatabaseSwitch::class,
+            'subscription' => \App\Http\Middleware\SubscriptionEnforcement::class,
+            'flopos_admin' => \App\Http\Middleware\IsFloposAdmin::class,
+            'mobile_reports' => \App\Http\Middleware\MobileReportsAuth::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

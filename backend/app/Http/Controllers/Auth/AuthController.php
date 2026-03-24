@@ -199,6 +199,7 @@ class AuthController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'phone' => $user->full_phone,
+                'is_flopos_admin' => (bool) $user->is_flopos_admin,
             ],
             'tenants' => $tenants,
         ]);

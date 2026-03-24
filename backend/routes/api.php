@@ -18,6 +18,9 @@ use App\Http\Controllers\Tenant\StaffController;
 use App\Http\Controllers\Tenant\TenantSettingsController;
 use App\Http\Controllers\Tenant\TaxPreviewController;
 use App\Http\Controllers\Tenant\OrderItemController;
+use App\Http\Controllers\Mobile\MobilePairingController;
+use App\Http\Controllers\Mobile\ReportsController;
+use App\Http\Controllers\Admin\TenantAdminController;
 
 /*
 |--------------------------------------------------------------------------
@@ -82,7 +85,7 @@ Route::prefix('auth')->group(function () {
 | 1. Valid JWT token (auth:api)
 | 2. tenant_id in JWT claims (tenant middleware switches DB)
 */
-Route::middleware(['auth:api', 'tenant'])->group(function () {
+Route::middleware(['auth:api', 'tenant', 'subscription'])->group(function () {
 
     // Categories
     Route::apiResource('categories', CategoryController::class);
@@ -139,3 +142,53 @@ Route::middleware(['auth:api', 'tenant'])->group(function () {
     // Tax Preview
     Route::post('tax/preview', [TaxPreviewController::class, 'preview']);
 });
+
+/*
+|--------------------------------------------------------------------------
+| Mobile Pairing Routes
+|--------------------------------------------------------------------------
+*/
+// Public: pair a mobile device with a 6-char code
+Route::post('mobile/pair', [MobilePairingController::class, 'pair']);
+
+// Protected: manage pairing code (requires regular JWT)
+Route::middleware('auth:api')->prefix('mobile')->group(function () {
+    Route::get('pairing-code', [MobilePairingController::class, 'show']);
+    Route::post('rotate-code', [MobilePairingController::class, 'rotate']);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Mobile Reports Routes (scope-gated: requires scope=reports JWT)
+|--------------------------------------------------------------------------
+*/
+Route::middleware('mobile_reports')->prefix('reports')->group(function () {
+    Route::get('summary', [ReportsController::class, 'summary']);
+    Route::get('sales', [ReportsController::class, 'sales']);
+    Route::get('top-products', [ReportsController::class, 'topProducts']);
+    Route::get('recent-orders', [ReportsController::class, 'recentOrders']);
+    Route::get('tables', [ReportsController::class, 'tables']);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Admin Panel Routes (Flopos cloud only — never registered on self-hosted)
+|--------------------------------------------------------------------------
+| These routes do not exist at all when APP_EDITION=self-hosted.
+| Setting is_flopos_admin=true in the DB has zero effect on self-hosted
+| instances because the routes are never registered.
+*/
+if (config('app.edition') === 'cloud') {
+    Route::middleware(['auth:api', 'flopos_admin'])->prefix('admin')->group(function () {
+        // Tenant management
+        Route::get('tenants', [TenantAdminController::class, 'index']);
+        Route::get('tenants/{id}', [TenantAdminController::class, 'show']);
+        Route::post('tenants/{id}/suspend', [TenantAdminController::class, 'suspend']);
+        Route::post('tenants/{id}/reactivate', [TenantAdminController::class, 'reactivate']);
+        Route::put('tenants/{id}/plan', [TenantAdminController::class, 'updatePlan']);
+
+        // User management
+        Route::get('users', [TenantAdminController::class, 'users']);
+        Route::put('users/{id}/admin', [TenantAdminController::class, 'setAdmin']);
+    });
+}

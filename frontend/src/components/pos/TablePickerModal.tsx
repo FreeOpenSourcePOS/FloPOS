@@ -7,7 +7,7 @@ import { useHeldOrdersStore } from '@/store/held-orders';
 interface Props {
   tables: Table[];
   selectedTableId: number | null;
-  onSelectAvailable: (tableId: number) => void;
+  onSelectAvailable: (tableId: number, customer?: { id: number; name: string; phone: string } | null) => void;
   onSelectOccupied: (table: Table) => void;
   onSelectHeld: (tableId: number) => void;
   onClose: () => void;
@@ -34,8 +34,12 @@ export default function TablePickerModal({
       onSelectOccupied(table);
       return;
     }
-    if (table.status === 'available') {
-      onSelectAvailable(table.id);
+    if (table.status === 'available' || table.status === 'reserved') {
+      const customer = table.status === 'reserved' && table.reservation_customer_id
+        ? { id: table.reservation_customer_id, name: table.reservation_customer_name ?? '', phone: table.reservation_customer_phone ?? '' }
+        : null;
+      onSelectAvailable(table.id, customer);
+      return;
     }
   };
 
@@ -54,7 +58,7 @@ export default function TablePickerModal({
             const isHeld = heldOrders.hasHeldOrder(table.id);
             const isSelected = selectedTableId === table.id;
             const style = statusStyles[table.status] || statusStyles.available;
-            const isDisabled = table.status === 'reserved' || table.status === 'maintenance';
+            const isDisabled = table.status === 'maintenance';
 
             return (
               <button

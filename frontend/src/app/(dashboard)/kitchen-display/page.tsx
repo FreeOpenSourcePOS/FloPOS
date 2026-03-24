@@ -1,19 +1,21 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
-import { Clock, ChefHat, X } from 'lucide-react';
+import { Clock, ChefHat, X, ChevronRight, ChevronLeft } from 'lucide-react';
 import type { Order, OrderItem } from '@/lib/types';
 
 const STATUS_CONFIG = {
-  pending: { label: 'Waiting', color: 'bg-yellow-500', border: 'border-yellow-300', text: 'text-yellow-700', bg: 'bg-yellow-50' },
-  preparing: { label: 'Preparing', color: 'bg-blue-500', border: 'border-blue-300', text: 'text-blue-700', bg: 'bg-blue-50' },
-  ready: { label: 'Ready', color: 'bg-green-500', border: 'border-green-300', text: 'text-green-700', bg: 'bg-green-50' },
-  served: { label: 'Delivered', color: 'bg-purple-500', border: 'border-purple-300', text: 'text-purple-700', bg: 'bg-purple-50' },
+  pending: { label: 'Waiting', color: 'bg-yellow-500', border: 'border-yellow-300', text: 'text-yellow-700', bg: 'bg-yellow-50', btnBg: 'bg-yellow-500 hover:bg-yellow-600' },
+  preparing: { label: 'Preparing', color: 'bg-blue-500', border: 'border-blue-300', text: 'text-blue-700', bg: 'bg-blue-50', btnBg: 'bg-blue-500 hover:bg-blue-600' },
+  ready: { label: 'Ready', color: 'bg-green-500', border: 'border-green-300', text: 'text-green-700', bg: 'bg-green-50', btnBg: 'bg-green-500 hover:bg-green-600' },
+  served: { label: 'Delivered', color: 'bg-purple-500', border: 'border-purple-300', text: 'text-purple-700', bg: 'bg-purple-50', btnBg: 'bg-purple-500 hover:bg-purple-600' },
 } as const;
 
 type KitchenStatus = keyof typeof STATUS_CONFIG;
+
+const STATUS_ORDER: KitchenStatus[] = ['pending', 'preparing', 'ready', 'served'];
 
 const NEXT_STATUS: Record<string, KitchenStatus | null> = {
   pending: 'preparing',
@@ -22,15 +24,25 @@ const NEXT_STATUS: Record<string, KitchenStatus | null> = {
   served: null,
 };
 
+const PREV_STATUS: Record<string, KitchenStatus | null> = {
+  pending: null,
+  preparing: 'pending',
+  ready: 'preparing',
+  served: 'ready',
+};
+
+interface ModalItem {
+  item: OrderItem;
+  orderNumber: string;
+}
 
 export default function KitchenDisplayPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<KitchenStatus>('pending');
-  const [activeItemId, setActiveItemId] = useState<number | null>(null);
+  const [modalItem, setModalItem] = useState<ModalItem | null>(null);
   const [updating, setUpdating] = useState<number | null>(null);
-  const popoverRef = useRef<HTMLDivElement>(null);
 
   const fetchOrders = async () => {
     try {
@@ -50,18 +62,6 @@ export default function KitchenDisplayPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Close popover on click outside
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
-        setActiveItemId(null);
-      }
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
-
-  // Filter orders to only show those with items matching the active tab
   const filteredOrders = orders
     .map((order) => ({
       ...order,
@@ -73,11 +73,10 @@ export default function KitchenDisplayPage() {
     setUpdating(itemId);
     try {
       const { data } = await api.patch(`/order-items/${itemId}/status`, { status });
-      // Update the order in local state
       setOrders((prev) =>
         prev.map((o) => (o.id === data.order.id ? data.order : o))
       );
-      setActiveItemId(null);
+      setModalItem(null);
       toast.success(`Item marked as ${STATUS_CONFIG[status].label}`);
     } catch {
       toast.error('Failed to update item');
@@ -93,10 +92,6 @@ export default function KitchenDisplayPage() {
     return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
   };
 
-  const getCardBorder = (status: KitchenStatus) => {
-    return STATUS_CONFIG[status].border;
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -104,6 +99,10 @@ export default function KitchenDisplayPage() {
       </div>
     );
   }
+
+  const activeItem = modalItem?.item;
+  const nextStatus = activeItem ? NEXT_STATUS[activeItem.status || 'pending'] : null;
+  const prevStatus = activeItem ? PREV_STATUS[activeItem.status || 'pending'] : null;
 
   return (
     <div className="h-full flex flex-col">
@@ -138,7 +137,6 @@ export default function KitchenDisplayPage() {
               </button>
             );
           })}
-
         </div>
       </div>
 
@@ -148,7 +146,7 @@ export default function KitchenDisplayPage() {
           {filteredOrders.map((order) => (
             <div
               key={order.id}
-              className={`bg-white rounded-xl border-2 ${getCardBorder(activeTab)} p-4 flex flex-col`}
+              className={`bg-white rounded-xl border-2 ${STATUS_CONFIG[activeTab].border} p-4 flex flex-col`}
             >
               {/* Order Header */}
               <div className="flex justify-between items-center mb-3">
@@ -165,71 +163,39 @@ export default function KitchenDisplayPage() {
                 </div>
               </div>
 
-              {/* Items (only those matching active tab) */}
-              <div className="space-y-1.5 flex-1">
+              {/* Items */}
+              <div className="space-y-2 flex-1">
                 {order.items?.map((item) => {
                   const itemStatus = (item.status || 'pending') as KitchenStatus;
                   const config = STATUS_CONFIG[itemStatus];
-                  const nextStatus = NEXT_STATUS[itemStatus];
-                  const isPopoverOpen = activeItemId === item.id;
 
                   return (
-                    <div key={item.id} className="relative">
-                      <button
-                        onClick={() => setActiveItemId(isPopoverOpen ? null : item.id)}
-                        className={`w-full text-left p-2 rounded-lg hover:bg-gray-50 transition-colors ${isPopoverOpen ? 'bg-gray-50 ring-1 ring-brand' : ''}`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${config.color}`} />
-                          <span className="font-bold text-brand text-sm w-5">{item.quantity}x</span>
-                          <span className="text-gray-900 text-sm font-medium flex-1 truncate">{item.product_name}</span>
-                        </div>
-                        {item.addons && item.addons.length > 0 && (
-                          <div className="ml-7 flex flex-wrap gap-1 mt-1">
-                            {item.addons.map((addon, i) => (
-                              <span key={i} className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">
-                                + {addon.name}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        {item.special_instructions && (
-                          <p className="ml-7 text-[11px] text-red-500 italic mt-0.5">
-                            {`"${item.special_instructions}"`}
-                          </p>
-                        )}
-                      </button>
-
-                      {/* Status advance popover */}
-                      {isPopoverOpen && (
-                        <div
-                          ref={popoverRef}
-                          className="absolute left-0 right-0 top-full z-10 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg p-3"
-                        >
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm font-medium text-gray-900 truncate">{item.product_name}</span>
-                            <button onClick={() => setActiveItemId(null)} className="text-gray-400 hover:text-gray-600">
-                              <X size={14} />
-                            </button>
-                          </div>
-                          {nextStatus ? (
-                            <button
-                              onClick={() => updateItemStatus(item.id, nextStatus)}
-                              disabled={updating === item.id}
-                              className={`w-full py-2 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-50 ${
-                                STATUS_CONFIG[nextStatus].color
-                              } hover:opacity-90`}
-                            >
-                              {updating === item.id
-                                ? 'Updating...'
-                                : `Mark as ${STATUS_CONFIG[nextStatus].label}`}
-                            </button>
-                          ) : (
-                            <p className="text-center text-sm text-gray-400 py-1">Delivered</p>
-                          )}
+                    <button
+                      key={item.id}
+                      onClick={() => setModalItem({ item, orderNumber: order.order_number })}
+                      className={`w-full text-left rounded-xl border-2 ${config.border} ${config.bg} px-3 py-2.5 transition-all active:scale-95 hover:brightness-95`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${config.color}`} />
+                        <span className={`font-bold text-sm w-6 shrink-0 ${config.text}`}>{item.quantity}×</span>
+                        <span className="text-gray-900 text-sm font-semibold flex-1 truncate">{item.product_name}</span>
+                        <ChevronRight size={14} className="text-gray-400 shrink-0" />
+                      </div>
+                      {item.addons && item.addons.length > 0 && (
+                        <div className="ml-[26px] flex flex-wrap gap-1 mt-1">
+                          {item.addons.map((addon, i) => (
+                            <span key={i} className="text-[10px] bg-white/70 text-blue-600 px-1.5 py-0.5 rounded border border-blue-200">
+                              + {addon.name}
+                            </span>
+                          ))}
                         </div>
                       )}
-                    </div>
+                      {item.special_instructions && (
+                        <p className="ml-[26px] text-[11px] text-red-600 italic mt-0.5 font-medium">
+                          {`"${item.special_instructions}"`}
+                        </p>
+                      )}
+                    </button>
                   );
                 })}
               </div>
@@ -245,6 +211,110 @@ export default function KitchenDisplayPage() {
           </div>
         )}
       </div>
+
+      {/* Full-screen item modal */}
+      {modalItem && activeItem && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setModalItem(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal header */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-400 font-medium mb-1">Order #{modalItem.orderNumber}</p>
+                <h2 className="text-2xl font-bold text-gray-900 leading-tight">{activeItem.product_name}</h2>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className={`text-sm font-bold ${STATUS_CONFIG[(activeItem.status || 'pending') as KitchenStatus].text}`}>
+                    {activeItem.quantity}×
+                  </span>
+                  <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_CONFIG[(activeItem.status || 'pending') as KitchenStatus].bg} ${STATUS_CONFIG[(activeItem.status || 'pending') as KitchenStatus].text}`}>
+                    <div className={`w-1.5 h-1.5 rounded-full ${STATUS_CONFIG[(activeItem.status || 'pending') as KitchenStatus].color}`} />
+                    {STATUS_CONFIG[(activeItem.status || 'pending') as KitchenStatus].label}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setModalItem(null)}
+                className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 shrink-0"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Addons */}
+            {activeItem.addons && activeItem.addons.length > 0 && (
+              <div className="bg-blue-50 rounded-xl p-3">
+                <p className="text-xs font-semibold text-blue-700 mb-1.5 uppercase tracking-wide">Add-ons</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {activeItem.addons.map((addon, i) => (
+                    <span key={i} className="text-sm bg-white text-blue-700 px-2.5 py-1 rounded-lg border border-blue-200 font-medium">
+                      + {addon.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Special instructions */}
+            {activeItem.special_instructions && (
+              <div className="bg-red-50 rounded-xl p-3">
+                <p className="text-xs font-semibold text-red-700 mb-1 uppercase tracking-wide">Special Instructions</p>
+                <p className="text-sm text-red-700 italic font-medium">{activeItem.special_instructions}</p>
+              </div>
+            )}
+
+            {/* Status pipeline */}
+            <div className="flex items-center justify-center gap-1.5">
+              {STATUS_ORDER.map((s, i) => (
+                <div key={s} className="flex items-center gap-1.5">
+                  <div className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${
+                    (activeItem.status || 'pending') === s
+                      ? `${STATUS_CONFIG[s].bg} ${STATUS_CONFIG[s].text} ring-2 ring-current`
+                      : STATUS_ORDER.indexOf((activeItem.status || 'pending') as KitchenStatus) > i
+                        ? 'bg-gray-100 text-gray-400 line-through'
+                        : 'bg-gray-100 text-gray-400'
+                  }`}>
+                    {STATUS_CONFIG[s].label}
+                  </div>
+                  {i < STATUS_ORDER.length - 1 && <ChevronRight size={12} className="text-gray-300 shrink-0" />}
+                </div>
+              ))}
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex flex-col gap-3">
+              {nextStatus && (
+                <button
+                  onClick={() => updateItemStatus(activeItem.id, nextStatus)}
+                  disabled={updating === activeItem.id}
+                  className={`w-full py-5 rounded-2xl text-white text-xl font-bold transition-all active:scale-95 disabled:opacity-50 ${STATUS_CONFIG[nextStatus].btnBg}`}
+                >
+                  {updating === activeItem.id ? 'Updating…' : `Mark as ${STATUS_CONFIG[nextStatus].label}`}
+                </button>
+              )}
+              {prevStatus && (
+                <button
+                  onClick={() => updateItemStatus(activeItem.id, prevStatus)}
+                  disabled={updating === activeItem.id}
+                  className="w-full py-4 rounded-2xl text-gray-600 text-base font-semibold border-2 border-gray-200 bg-gray-50 hover:bg-gray-100 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <ChevronLeft size={18} />
+                  Back to {STATUS_CONFIG[prevStatus].label}
+                </button>
+              )}
+              {!nextStatus && (
+                <div className="text-center py-4 text-gray-400 text-base font-medium">
+                  ✓ Delivered — no further actions
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

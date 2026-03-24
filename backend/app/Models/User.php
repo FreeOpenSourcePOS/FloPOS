@@ -25,6 +25,9 @@ class User extends Authenticatable implements JWTSubject
         'country_code',
         'password',
         'is_active',
+        'is_flopos_admin',
+        'mobile_pairing_code',
+        'mobile_pairing_code_rotated_at',
     ];
 
     /**
@@ -47,8 +50,10 @@ class User extends Authenticatable implements JWTSubject
         return [
             'email_verified_at' => 'datetime',
             'phone_verified_at' => 'datetime',
+            'mobile_pairing_code_rotated_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'is_flopos_admin' => 'boolean',
         ];
     }
 

@@ -152,8 +152,11 @@ export default function POSPage() {
     }
   };
 
-  const handleSelectAvailableTable = (tableId: number) => {
+  const handleSelectAvailableTable = (tableId: number, customer?: { id: number; name: string; phone: string } | null) => {
     cart.setTableId(tableId);
+    if (customer) {
+      cart.setCustomer({ ...customer, email: null, visits_count: 0, total_spent: 0, last_visit_at: null, country_code: '' });
+    }
     setShowTablePicker(false);
   };
 

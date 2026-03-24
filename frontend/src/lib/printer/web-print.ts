@@ -15,6 +15,8 @@ export interface WebPrintOptions {
   gstin?: string;
   address?: string;
   phone?: string;
+  footerNote?: string;
+  businessName?: string;
 }
 
 /**
@@ -58,7 +60,8 @@ export function generateBillHtml(
   tenant: Pick<Tenant, 'business_name' | 'currency'>,
   opts: WebPrintOptions = {}
 ): string {
-  const { paperSize = 'a4', includeGst = false, gstin, address, phone } = opts;
+  const { paperSize = 'a4', includeGst = false, gstin, address, phone, footerNote, businessName } = opts;
+  const displayName = businessName ?? tenant.business_name;
   const currency = tenant.currency ?? '₹';
   const order = bill.order;
 
@@ -93,8 +96,8 @@ export function generateBillHtml(
   <div class="bill-container">
     <!-- Header -->
     <div class="header">
-      <h1>${tenant.business_name}</h1>
-      ${address ? `<p>${address}</p>` : ''}
+      ${displayName ? `<h1>${displayName}</h1>` : ''}
+      ${address ? `<p>${address.replace(/\n/g, '<br>')}</p>` : ''}
       ${phone ? `<p>Ph: ${phone}</p>` : ''}
       ${gstin ? `<p>GSTIN: ${gstin}</p>` : ''}
     </div>
@@ -180,8 +183,7 @@ export function generateBillHtml(
 
     <!-- Footer -->
     <div class="footer">
-      <p>Thank you for your visit!</p>
-      <p>Please come again</p>
+      ${footerNote ? `<p>${footerNote}</p>` : '<p>Thank you for your visit!</p>'}
       ${includeGst ? '<p>Rates inclusive of GST</p>' : ''}
     </div>
   </div>

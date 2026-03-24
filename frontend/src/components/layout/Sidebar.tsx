@@ -26,6 +26,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  useSidebar,
 } from '@/components/ui/sidebar';
 
 // null = show for all business types
@@ -43,6 +44,8 @@ const ALL_NAV_ITEMS = [
 export default function AppSidebar() {
   const pathname = usePathname();
   const { currentTenant, logout } = useAuthStore();
+  const { isMobile, setOpenMobile } = useSidebar();
+  const closeMobile = () => { if (isMobile) setOpenMobile(false); };
 
   const role = currentTenant?.role || 'cashier';
   const businessType = currentTenant?.business_type || 'restaurant';
@@ -85,7 +88,7 @@ export default function AppSidebar() {
                 return (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
-                      <Link href={item.href}>
+                      <Link href={item.href} onClick={closeMobile}>
                         <item.icon />
                         <span>{item.label}</span>
                       </Link>

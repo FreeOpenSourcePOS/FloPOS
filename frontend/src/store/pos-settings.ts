@@ -26,6 +26,10 @@ interface PosSettingsState {
   billGstin: string;
   billAddress: string;
   billPhone: string;
+  billShowName: boolean;
+  billShowAddress: boolean;
+  billShowPhone: boolean;
+  billShowGstn: boolean;
   // Actions
   setShowProductImages: (show: boolean) => void;
   setCustomerMandatory: (mandatory: boolean) => void;
@@ -44,6 +48,10 @@ interface PosSettingsState {
   setBillGstin: (g: string) => void;
   setBillAddress: (a: string) => void;
   setBillPhone: (p: string) => void;
+  setBillShowName: (v: boolean) => void;
+  setBillShowAddress: (v: boolean) => void;
+  setBillShowPhone: (v: boolean) => void;
+  setBillShowGstn: (v: boolean) => void;
 }
 
 export const usePosSettingsStore = create<PosSettingsState>()(
@@ -69,6 +77,10 @@ export const usePosSettingsStore = create<PosSettingsState>()(
       billGstin: '',
       billAddress: '',
       billPhone: '',
+      billShowName: true,
+      billShowAddress: true,
+      billShowPhone: true,
+      billShowGstn: false,
       // Actions
       setShowProductImages: (show) => set({ showProductImages: show }),
       setCustomerMandatory: (mandatory) => set({ customerMandatory: mandatory }),
@@ -87,6 +99,10 @@ export const usePosSettingsStore = create<PosSettingsState>()(
       setBillGstin: (g) => set({ billGstin: g }),
       setBillAddress: (a) => set({ billAddress: a }),
       setBillPhone: (p) => set({ billPhone: p }),
+      setBillShowName: (v) => set({ billShowName: v }),
+      setBillShowAddress: (v) => set({ billShowAddress: v }),
+      setBillShowPhone: (v) => set({ billShowPhone: v }),
+      setBillShowGstn: (v) => set({ billShowGstn: v }),
     }),
     { name: 'pos-settings' }
   )

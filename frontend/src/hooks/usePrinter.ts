@@ -67,23 +67,38 @@ export const usePrinterStore = create<PrinterState>()(
       printBill: async (bill, tenant, opts) => {
         set({ lastError: null });
         try {
-          const { paperWidth } = get();
           const {
             billTemplate,
-            billGstin,
-            billAddress,
-            billPhone,
-            billFooterMessage,
+            billGstin, billAddress, billPhone, billFooterMessage,
+            billShowName, billShowAddress, billShowPhone, billShowGstn,
+            webPrintSize,
           } = usePosSettingsStore.getState();
 
+          if (get().printMethod === 'browser') {
+            // Browser / A4 print path
+            const { printWebBill } = await import('@/lib/printer/web-print');
+            printWebBill(bill, tenant, {
+              paperSize: webPrintSize,
+              includeGst: billShowGstn,
+              gstin: billShowGstn && billGstin ? billGstin : undefined,
+              address: billShowAddress && billAddress ? billAddress : undefined,
+              phone: billShowPhone && billPhone ? billPhone : undefined,
+              footerNote: billFooterMessage || undefined,
+              businessName: billShowName ? tenant.business_name : undefined,
+            });
+            return;
+          }
+
+          // ESC/POS thermal path
+          const { paperWidth } = get();
           const builderOpts: ReceiptOptions = {
             ...opts,
             paperWidth,
-            gstin: billGstin || undefined,
-            address: billAddress || undefined,
-            phone: billPhone || undefined,
+            gstin: billShowGstn && billGstin ? billGstin : undefined,
+            address: billShowAddress && billAddress ? billAddress : undefined,
+            phone: billShowPhone && billPhone ? billPhone : undefined,
             footerNote: billFooterMessage || undefined,
-            showTaxBreakdown: true,
+            showTaxBreakdown: billShowGstn,
           };
 
           let bytes: Uint8Array;
@@ -96,12 +111,7 @@ export const usePrinterStore = create<PrinterState>()(
           }
 
           set({ lastPrintedBytes: bytes });
-
-          if (get().printMethod === 'escpos') {
-            await printerService.print(bytes);
-          } else {
-            throw new Error('Browser print mode - use printViaBrowser instead');
-          }
+          await printerService.print(bytes);
         } catch (err) {
           set({ lastError: (err as Error).message });
           throw err;

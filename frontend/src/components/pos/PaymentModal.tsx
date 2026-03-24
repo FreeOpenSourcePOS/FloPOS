@@ -172,8 +172,13 @@ export default function PaymentModal({ bill, currency, onClose, onPaid }: Props)
                     onChange={(e) => {
                       const v = e.target.value;
                       const max = Math.min(walletBalance, remaining);
-                      if (parseFloat(v) > max) setWalletAmount(max.toFixed(2));
-                      else setWalletAmount(v);
+                      const clamped = parseFloat(v) > max ? max.toFixed(2) : v;
+                      setWalletAmount(clamped);
+                      // Auto-reduce first payment so total stays at remaining
+                      const walletUsed = parseFloat(clamped) || 0;
+                      setPayments((prev) => prev.map((p, i) =>
+                        i === 0 ? { ...p, amount: Math.max(0, remaining - walletUsed).toFixed(2) } : p
+                      ));
                     }}
                     placeholder={`0 – ${Math.min(walletBalance, remaining).toFixed(2)}`}
                     className="flex-1 px-3 py-2 text-sm border border-purple-200 rounded-lg outline-none focus:ring-2 focus:ring-purple-400 bg-white"

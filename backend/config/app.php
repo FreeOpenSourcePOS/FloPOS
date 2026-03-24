@@ -15,6 +15,8 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
+    'edition' => env('APP_EDITION', 'self-hosted'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment
