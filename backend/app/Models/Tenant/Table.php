@@ -24,6 +24,9 @@ class Table extends Model
         'position_y',
         'qr_code',
         'is_active',
+        'reservation_customer_id',
+        'reservation_customer_name',
+        'reservation_customer_phone',
     ];
 
     protected function casts(): array

@@ -110,13 +110,29 @@ class TableController extends Controller
 
         $validator = Validator::make($request->all(), [
             'status' => 'required|in:available,occupied,reserved,maintenance',
+            'reservation_customer_id' => 'nullable|integer',
+            'reservation_customer_name' => 'nullable|string|max:100',
+            'reservation_customer_phone' => 'nullable|string|max:20',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $table->update(['status' => $request->status]);
+        $updateData = ['status' => $request->status];
+
+        if ($request->status === 'reserved') {
+            $updateData['reservation_customer_id'] = $request->reservation_customer_id;
+            $updateData['reservation_customer_name'] = $request->reservation_customer_name;
+            $updateData['reservation_customer_phone'] = $request->reservation_customer_phone;
+        } else {
+            // Clear reservation info when un-reserving
+            $updateData['reservation_customer_id'] = null;
+            $updateData['reservation_customer_name'] = null;
+            $updateData['reservation_customer_phone'] = null;
+        }
+
+        $table->update($updateData);
 
         return response()->json(['table' => $table->fresh()]);
     }
