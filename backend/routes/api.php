@@ -21,6 +21,8 @@ use App\Http\Controllers\Tenant\OrderItemController;
 use App\Http\Controllers\Mobile\MobilePairingController;
 use App\Http\Controllers\Mobile\ReportsController;
 use App\Http\Controllers\Admin\TenantAdminController;
+use App\Http\Controllers\Admin\AdminAuthController;
+use App\Http\Controllers\Admin\AdminUserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -174,21 +176,36 @@ Route::middleware('mobile_reports')->prefix('reports')->group(function () {
 |--------------------------------------------------------------------------
 | Admin Panel Routes (Flopos cloud only — never registered on self-hosted)
 |--------------------------------------------------------------------------
-| These routes do not exist at all when APP_EDITION=self-hosted.
-| Setting is_flopos_admin=true in the DB has zero effect on self-hosted
-| instances because the routes are never registered.
+| Admin users are stored in a separate `admin_users` table and authenticate
+| via the `admin` JWT guard. There is zero overlap with POS users.
 */
 if (config('app.edition') === 'cloud') {
-    Route::middleware(['auth:api', 'flopos_admin'])->prefix('admin')->group(function () {
-        // Tenant management
-        Route::get('tenants', [TenantAdminController::class, 'index']);
-        Route::get('tenants/{id}', [TenantAdminController::class, 'show']);
-        Route::post('tenants/{id}/suspend', [TenantAdminController::class, 'suspend']);
-        Route::post('tenants/{id}/reactivate', [TenantAdminController::class, 'reactivate']);
-        Route::put('tenants/{id}/plan', [TenantAdminController::class, 'updatePlan']);
+    Route::prefix('admin')->group(function () {
+        // Public: admin login
+        Route::post('auth/login', [AdminAuthController::class, 'login']);
 
-        // User management
-        Route::get('users', [TenantAdminController::class, 'users']);
-        Route::put('users/{id}/admin', [TenantAdminController::class, 'setAdmin']);
+        // Protected: requires valid admin JWT
+        Route::middleware(['auth:admin', 'flopos_admin'])->group(function () {
+            Route::post('auth/logout', [AdminAuthController::class, 'logout']);
+            Route::post('auth/refresh', [AdminAuthController::class, 'refresh']);
+            Route::get('auth/me', [AdminAuthController::class, 'me']);
+            Route::post('auth/password', [AdminAuthController::class, 'changePassword']);
+
+            // Tenant management
+            Route::get('tenants', [TenantAdminController::class, 'index']);
+            Route::get('tenants/{id}', [TenantAdminController::class, 'show']);
+            Route::post('tenants/{id}/suspend', [TenantAdminController::class, 'suspend']);
+            Route::post('tenants/{id}/reactivate', [TenantAdminController::class, 'reactivate']);
+            Route::put('tenants/{id}/plan', [TenantAdminController::class, 'updatePlan']);
+
+            // POS user management (read-only — admins cannot escalate POS users)
+            Route::get('users', [TenantAdminController::class, 'users']);
+
+            // Admin user management
+            Route::get('admins', [AdminUserController::class, 'index']);
+            Route::post('admins', [AdminUserController::class, 'store']);
+            Route::put('admins/{id}', [AdminUserController::class, 'update']);
+            Route::delete('admins/{id}', [AdminUserController::class, 'destroy']);
+        });
     });
 }

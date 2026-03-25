@@ -150,26 +150,4 @@ class TenantAdminController extends Controller
         ]);
     }
 
-    /**
-     * Promote/demote a user to/from Flopos admin.
-     * PUT /api/admin/users/{id}/admin
-     */
-    public function setAdmin(Request $request, int $id): JsonResponse
-    {
-        $validator = Validator::make($request->all(), [
-            'is_flopos_admin' => 'required|boolean',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        $user = User::findOrFail($id);
-        $user->update(['is_flopos_admin' => $request->boolean('is_flopos_admin')]);
-
-        return response()->json([
-            'message' => $user->is_flopos_admin ? 'User promoted to Flopos admin.' : 'Admin access revoked.',
-            'user' => $user->only(['id', 'name', 'email', 'is_flopos_admin']),
-        ]);
-    }
 }
