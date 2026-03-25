@@ -23,6 +23,8 @@ use App\Http\Controllers\Mobile\ReportsController;
 use App\Http\Controllers\Admin\TenantAdminController;
 use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\AdminUserController;
+use App\Cloud\Http\Controllers\Admin\CrmController;
+use App\Cloud\Http\Controllers\Tenant\CrmLookupController;
 
 /*
 |--------------------------------------------------------------------------
@@ -206,6 +208,19 @@ if (config('app.edition') === 'cloud') {
             Route::post('admins', [AdminUserController::class, 'store']);
             Route::put('admins/{id}', [AdminUserController::class, 'update']);
             Route::delete('admins/{id}', [AdminUserController::class, 'destroy']);
+
+            // Central CRM
+            Route::prefix('crm')->group(function () {
+                Route::get('customers', [CrmController::class, 'index']);
+                Route::post('customers', [CrmController::class, 'store']);
+                Route::get('customers/{id}', [CrmController::class, 'show']);
+                Route::put('customers/{id}', [CrmController::class, 'update']);
+                Route::delete('customers/{id}', [CrmController::class, 'destroy']);
+            });
         });
     });
+
+    // CRM lookup for POS — tenant-scoped, cloud-only
+    Route::middleware(['auth:api', 'tenant', 'subscription'])
+        ->get('crm/lookup', [CrmLookupController::class, 'lookup']);
 }

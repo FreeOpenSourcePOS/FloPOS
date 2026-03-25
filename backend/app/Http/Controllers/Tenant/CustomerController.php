@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Tenant;
 
+use App\Events\CustomerCreated as CustomerCreatedEvent;
 use App\Http\Controllers\Controller;
 use App\Models\Tenant\Customer;
 use App\Models\Tenant\LoyaltyLedger;
@@ -68,6 +69,18 @@ class CustomerController extends Controller
         }
 
         $customer = Customer::create($data);
+
+        // Cloud CRM sync — no-op when CRM service is not registered (self-hosted)
+        try {
+            if (app()->bound('crm')) {
+                $tenantId = $request->attributes->get('tenant')->id;
+                app('crm')->syncToGlobal($customer, $tenantId);
+            }
+        } catch (\Throwable) {
+            // Non-fatal: local customer was created successfully
+        }
+
+        event(new CustomerCreatedEvent($customer, $request->attributes->get('tenant')?->id ?? 0));
 
         return response()->json(['customer' => $customer], 201);
     }

@@ -31,6 +31,9 @@ class Customer extends Model
         'notes',
         'gstin',
         'customer_state_code',
+        'global_customer_id',
+        'dietary_preferences',
+        'favourite_dishes',
     ];
 
     protected function casts(): array
@@ -42,7 +45,10 @@ class Customer extends Model
             'total_spent' => 'decimal:2',
             'average_bill' => 'decimal:2',
             'last_visit_at' => 'datetime',
-            'preferences' => 'array',
+            'preferences'         => 'array',
+        'dietary_preferences' => 'array',
+        'favourite_dishes'    => 'array',
+        'global_customer_id'  => 'integer',
         ];
     }
 

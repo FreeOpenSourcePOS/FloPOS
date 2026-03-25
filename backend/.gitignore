@@ -22,3 +22,6 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Cloud-edition private code — never committed to the public repo
+/app/Cloud/
