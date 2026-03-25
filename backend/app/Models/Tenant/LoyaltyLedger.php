@@ -33,6 +33,23 @@ class LoyaltyLedger extends Model
         return $this->belongsTo(Bill::class);
     }
 
+    protected static function booted(): void
+    {
+        static::created(function (LoyaltyLedger $entry) {
+            // Cloud wallet sync — no-op when service is not registered (self-hosted)
+            try {
+                if (app()->bound('wallet-sync')) {
+                    $tenantId = request()->attributes->get('tenant')?->id;
+                    if ($tenantId) {
+                        app('wallet-sync')->sync($entry, $tenantId);
+                    }
+                }
+            } catch (\Throwable) {
+                // Non-fatal — local ledger entry was created successfully
+            }
+        });
+    }
+
     /** Scope: only non-expired entries */
     public function scopeActive($query)
     {
