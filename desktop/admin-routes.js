@@ -35,7 +35,13 @@ function authMiddleware(req, res, next) {
 router.post('/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const result = await pool.query('SELECT * FROM users WHERE email = $1 AND is_active = true AND role = $2', [email, 'super_admin']);
+    // Allow super_admin, account_manager, reseller to login
+    // NOT merchant_owner (they're just referenced for FK)
+    const result = await pool.query(`
+      SELECT * FROM users 
+      WHERE email = $1 AND is_active = true 
+      AND role IN ('super_admin', 'account_manager', 'reseller')
+    `, [email]);
     const user = result.rows[0];
 
     if (!user || !bcrypt.compareSync(password, user.password)) {

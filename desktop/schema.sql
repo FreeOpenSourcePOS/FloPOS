@@ -1,9 +1,35 @@
 -- FloAdmin Database Schema
--- Simplified: Single users table with roles
+-- =========================
+-- This database is for managing the FloPOS business (not merchant POS data)
+-- 
+-- Architecture:
+-- - FloPOS (merchant app) runs locally with SQLite - they own ALL their data
+-- - FloAdmin (our panel) runs on cloud - we manage subscriptions & support
+-- - We ONLY store what we need for billing and support
+--
+-- What we DON'T store:
+-- - Merchant's products, orders, customers, staff
+-- - Any POS transaction data
+--
+-- What we DO store:
+-- - Merchant accounts (for billing)
+-- - Subscriptions
+-- - Support call history
+-- - Our team (internal staff)
 
 -- ============================================
--- USERS TABLE (Unified for all admin users)
+-- USERS TABLE
 -- ============================================
+-- Stores:
+-- - Our internal team (super_admin, account_manager, reseller)
+-- - Merchant owners (referenced by tenants.owner_id)
+--
+-- Roles:
+-- - super_admin: Full access to FloAdmin
+-- - account_manager: Manages merchants, handles support
+-- - reseller: Brings merchants, earns commission
+-- - merchant_owner: References to merchant account owners (for FK)
+-- - staff: NOT used in FloAdmin (staff stay in merchant's SQLite)
 CREATE TABLE public.users (
     id bigint NOT NULL DEFAULT nextval('users_id_seq'::regclass),
     email character varying(255) NOT NULL,
@@ -21,7 +47,7 @@ CREATE TABLE public.users (
     mobile_pairing_code character varying(6),
     mobile_pairing_code_rotated_at timestamp(0) without time zone,
     is_flopos_admin boolean DEFAULT false NOT NULL,
-    role text DEFAULT 'staff'::text CHECK (role IN ('super_admin', 'account_manager', 'reseller', 'staff')),
+    role text DEFAULT 'staff'::text CHECK (role IN ('super_admin', 'account_manager', 'reseller', 'staff', 'merchant_owner')),
     company_name text,
     commission_percent numeric(5,2) DEFAULT 0
 );
@@ -44,6 +70,7 @@ CREATE INDEX users_country_code_phone_index ON public.users USING btree (country
 -- ============================================
 -- SUPPORT CALLS TABLE
 -- ============================================
+-- Tracks support requests from merchants
 CREATE TABLE public.support_calls (
     id text NOT NULL,
     merchant_id text NOT NULL,
@@ -61,12 +88,13 @@ CREATE TABLE public.support_calls (
 );
 
 ALTER TABLE public.support_calls OWNER TO flopos_user;
-
 ALTER TABLE ONLY public.support_calls ADD CONSTRAINT support_calls_pkey PRIMARY KEY (id);
 
 -- ============================================
--- TENANTS TABLE (existing - no changes)
+-- TENANTS TABLE
 -- ============================================
+-- Represents a merchant's FloPOS installation
+-- Linked to owner (user who purchased the subscription)
 CREATE TABLE public.tenants (
     id bigint NOT NULL DEFAULT nextval('tenants_id_seq'::regclass),
     owner_id bigint NOT NULL REFERENCES public.users(id) ON DELETE RESTRICT,
@@ -102,8 +130,9 @@ CREATE INDEX tenants_plan_index ON public.tenants USING btree (plan);
 CREATE INDEX tenants_status_index ON public.tenants USING btree (status);
 
 -- ============================================
--- SUBSCRIPTIONS TABLE (existing - no changes)
+-- SUBSCRIPTIONS TABLE
 -- ============================================
+-- Billing/subscription info per tenant
 CREATE TABLE public.subscriptions (
     id bigint NOT NULL DEFAULT nextval('subscriptions_id_seq'::regclass),
     tenant_id bigint NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
@@ -137,7 +166,7 @@ CREATE INDEX subscriptions_current_period_end_index ON public.subscriptions USIN
 -- ============================================
 -- SEED DATA: Default Admin Users
 -- ============================================
--- Password: admin123 (bcrypt hash)
+-- Password: admin123
 INSERT INTO public.users (name, email, password, role, is_flopos_admin, is_active) VALUES 
 ('Super Admin', 'admin@flopos.com', '$2a$10$bfR.tZvg/mIi9bVG0SBBRu8X8nhFKOviXdbLyb1gpqLkwEYUkDRw2', 'super_admin', true, true)
 ON CONFLICT (email) DO UPDATE SET role = 'super_admin', is_flopos_admin = true;
