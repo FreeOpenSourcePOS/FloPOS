@@ -111,8 +111,28 @@ router.get('/tenants', async (req, res) => {
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `, params);
 
+    const tenants = result.rows.map(row => ({
+      id: row.id,
+      business_name: row.business_name,
+      slug: row.slug,
+      business_type: row.business_type,
+      country: row.country,
+      plan: row.plan,
+      status: row.status,
+      trial_ends_at: row.trial_ends_at,
+      created_at: row.created_at,
+      owner: row.owner_id ? { id: row.owner_id, name: row.owner_name, email: row.owner_email } : null,
+      subscription: row.subscription_id ? {
+        status: row.subscription_status,
+        plan: row.subscription_plan,
+        current_period_end: row.current_period_end
+      } : null,
+      support_calls_used: parseInt(row.support_calls_used) || 0,
+      support_calls_limit: 2
+    }));
+
     res.json({
-      tenants: result.rows,
+      tenants,
       meta: {
         total,
         per_page: parseInt(limit),
