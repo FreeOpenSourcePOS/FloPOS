@@ -14,10 +14,10 @@
     "start": "electron ."
   },
   "author": {
-  "name": "FloPos",
-  "email": "support@flopos.local"
-},
-"homepage": "https://flopos.local",
+    "name": "FloPos",
+    "email": "support@flopos.local"
+  },
+  "homepage": "https://flopos.local",
   "license": "MIT",
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -40,6 +40,7 @@
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "node-thermal-printer": "^4.2.1",
+    "pg": "^8.20.0",
     "qrcode": "^1.5.3",
     "uuid": "^9.0.1",
     "ws": "^8.17.0"

@@ -390,6 +390,10 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'FloPos Local API', version: '1.0.0', timestamp: new Date().toISOString() });
 });
 
+// Admin routes (PostgreSQL)
+const adminRoutes = require('./admin-routes');
+app.use('/api/admin', adminRoutes);
+
 const PORT = process.env.PORT || 3088;
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`FloPos API Server running on http://localhost:${PORT}`);
