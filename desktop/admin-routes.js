@@ -35,15 +35,15 @@ function authMiddleware(req, res, next) {
 router.post('/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const result = await pool.query('SELECT * FROM admin_users WHERE email = $1 AND is_active = true', [email]);
+    const result = await pool.query('SELECT * FROM users WHERE email = $1 AND is_active = true AND role = $2', [email, 'super_admin']);
     const user = result.rows[0];
 
     if (!user || !bcrypt.compareSync(password, user.password)) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ id: user.id, email: user.email, role: 'admin' }, JWT_SECRET, { expiresIn: '24h' });
-    res.json({ token, user: { id: user.id, name: user.name, email: user.email } });
+    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '24h' });
+    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
   } catch (e) {
     console.error('Login error:', e);
     res.status(500).json({ error: 'Login failed' });
@@ -53,7 +53,7 @@ router.post('/auth/login', async (req, res) => {
 // Get current admin
 router.get('/auth/me', authMiddleware, async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, name, email FROM admin_users WHERE id = $1', [req.adminUser.id]);
+    const result = await pool.query('SELECT id, name, email, role FROM users WHERE id = $1', [req.adminUser.id]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'User not found' });
     res.json(result.rows[0]);
   } catch (e) {
@@ -300,26 +300,26 @@ router.patch('/support-calls/:id', authMiddleware, async (req, res) => {
 router.get('/account-managers', async (req, res) => {
   try {
     const { search } = req.query;
-    let whereClause = 'WHERE 1=1';
+    let whereClause = "WHERE u.role = 'account_manager'";
     const params = [];
 
     if (search) {
-      whereClause += ' AND (name ILIKE $1 OR email ILIKE $1)';
+      whereClause += ' AND (u.name ILIKE $1 OR u.email ILIKE $1)';
       params.push(`%${search}%`);
     }
 
     const result = await pool.query(`
       SELECT 
-        am.*,
+        u.id, u.name, u.email, u.phone, u.role, u.is_active, u.created_at,
         COUNT(DISTINCT t.id) as merchants_count,
         COUNT(DISTINCT CASE WHEN sc.status = 'open' THEN sc.id END) as open_calls
-      FROM account_managers am
-      LEFT JOIN merchant_account_mapping m ON am.id = m.account_manager_id
-      LEFT JOIN tenants t ON m.merchant_id = t.id::text
+      FROM users u
+      LEFT JOIN tenant_user tu ON u.id = tu.user_id AND tu.role = 'account_manager'
+      LEFT JOIN tenants t ON tu.tenant_id = t.id
       LEFT JOIN support_calls sc ON t.id::text = sc.merchant_id
       ${whereClause}
-      GROUP BY am.id
-      ORDER BY am.name
+      GROUP BY u.id
+      ORDER BY u.name
     `, params);
 
     res.json({ account_managers: result.rows });
@@ -332,14 +332,13 @@ router.get('/account-managers', async (req, res) => {
 router.post('/account-managers', authMiddleware, async (req, res) => {
   try {
     const { name, email, phone, role } = req.body;
-    const id = 'am-' + Date.now();
     const hashedPassword = bcrypt.hashSync('changeme123', 10);
 
     const result = await pool.query(`
-      INSERT INTO account_managers (id, name, email, phone, role, password)
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING *
-    `, [id, name, email, phone, role || 'support', hashedPassword]);
+      INSERT INTO users (name, email, phone, role, password, is_active)
+      VALUES ($1, $2, $3, 'account_manager', $4, true)
+      RETURNING id, name, email, phone, role, is_active, created_at
+    `, [name, email, phone, hashedPassword]);
 
     res.json(result.rows[0]);
   } catch (e) {
@@ -352,26 +351,23 @@ router.post('/account-managers', authMiddleware, async (req, res) => {
 router.get('/resellers', async (req, res) => {
   try {
     const { search } = req.query;
-    let whereClause = 'WHERE 1=1';
+    let whereClause = "WHERE u.role = 'reseller'";
     const params = [];
 
     if (search) {
-      whereClause += ' AND (company_name ILIKE $1 OR email ILIKE $1)';
+      whereClause += ' AND (u.name ILIKE $1 OR u.email ILIKE $1 OR u.company_name ILIKE $1)';
       params.push(`%${search}%`);
     }
 
     const result = await pool.query(`
       SELECT 
-        r.*,
-        COUNT(DISTINCT m.id) as merchants_count,
-        COALESCE(SUM(s.amount * r.commission_percent / 100), 0) as total_revenue
-      FROM resellers r
-      LEFT JOIN merchant_account_mapping m ON r.id = m.reseller_id
-      LEFT JOIN tenants t ON m.merchant_id = t.id::text
-      LEFT JOIN subscriptions s ON t.id = s.tenant_id AND s.status = 'active'
+        u.id, u.name, u.email, u.phone, u.role, u.company_name, u.commission_percent, u.is_active, u.created_at,
+        COUNT(DISTINCT t.id) as merchants_count
+      FROM users u
+      LEFT JOIN tenants t ON t.owner_id = u.id
       ${whereClause}
-      GROUP BY r.id
-      ORDER BY r.company_name
+      GROUP BY u.id
+      ORDER BY u.name
     `, params);
 
     res.json({ resellers: result.rows });
@@ -383,14 +379,14 @@ router.get('/resellers', async (req, res) => {
 
 router.post('/resellers', authMiddleware, async (req, res) => {
   try {
-    const { company_name, contact_name, email, phone, commission_percent } = req.body;
-    const id = 'res-' + Date.now();
+    const { name, email, phone, company_name, commission_percent } = req.body;
+    const hashedPassword = bcrypt.hashSync('changeme123', 10);
 
     const result = await pool.query(`
-      INSERT INTO resellers (id, company_name, contact_name, email, phone, commission_percent)
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING *
-    `, [id, company_name, contact_name, email, phone, commission_percent || 10]);
+      INSERT INTO users (name, email, phone, role, password, company_name, commission_percent, is_active)
+      VALUES ($1, $2, $3, 'reseller', $4, $5, $6, true)
+      RETURNING id, name, email, phone, role, company_name, commission_percent, is_active, created_at
+    `, [name, email, phone, hashedPassword, company_name, commission_percent || 10]);
 
     res.json(result.rows[0]);
   } catch (e) {
