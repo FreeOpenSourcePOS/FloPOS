@@ -1,0 +1,3 @@
+[submodule "flodesktop"]
+	path = flodesktop
+	url = https://github.com/FreeOpenSourcePOS/FloDesktop
