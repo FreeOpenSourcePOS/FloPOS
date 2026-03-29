@@ -311,7 +311,7 @@ fi
 if [[ $START_STEP -le 10 ]]; then
 step "10/12  Build & deploy frontend"
 ###############################################################################
-cd "${APP_DIR}/flodesktop/frontend"
+cd "${APP_DIR}/frontend"
 
 # Production environment — API is on same domain proxied by Caddy
 cat > .env.local <<ENV
@@ -367,7 +367,7 @@ ok "Caddyfile written"
 cat > /etc/supervisor/conf.d/flopos-frontend.conf <<SUP
 [program:flopos-frontend]
 command=/usr/bin/npm run start
-directory=${APP_DIR}/flodesktop/frontend
+directory=${APP_DIR}/frontend
 user=www-data
 autostart=true
 autorestart=true
